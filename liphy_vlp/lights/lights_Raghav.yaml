@@ -1,0 +1,44 @@
+Lights: #Location coordinates are in units of meters. Values obtained from origin program by converting pixels to meters using resolution
+        numLights: 6
+        Light 1: #Backdoor
+                keypoint: 1
+                corners: 0
+                pos_x: -1.01440
+                pos_y: -0.02000
+                diameter: 17.38 #In centimeters
+        
+        Light 2: #Next to Frederick's cubicle
+                keypoint: 2
+                corners: 4
+                pos_x: -7.03589
+                pos_y: -6.00492
+                diameter: 17.38
+        
+        Light 3:   #Light ID: (6431)
+                keypoint: 3
+                corners: 0
+                pos_x: -16.7461 
+                pos_y: -7.61025
+                diameter: 17.38
+        
+        Light 4: #Circular light near optical table. Light ID: (4111)
+                keypoint: 4
+                corners: 0
+                pos_x: -7.7
+                pos_y: -11.59010
+                diameter: 17.38
+
+
+        Light 5: #Next to last bench
+                keypoint: 5
+                corners: 0
+                pos_x: -6.78461
+                pos_y: -3.10513
+                diameter: 15.43
+        
+        Light 6: #Tube light near Yiru's desk Light ID: (2140)
+                keypoint: 6
+                corners: 4
+                pos_x: -7.7
+                pos_y: -11.59010
+                diameter: 111
