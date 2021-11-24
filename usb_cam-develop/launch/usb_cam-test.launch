@@ -3,9 +3,12 @@
     <param name="video_device" value="/dev/video2" />
     <param name="image_width" value="640" />
     <param name="image_height" value="480" />
+    <param name="framerate" value="5" />
     <param name="pixel_format" value="rgb24" />
     <param name="camera_frame_id" value="usb_cam" />
     <param name="io_method" value="mmap"/>
+    <!-- <param name="camera_info_url" value="package://turtlebot3_bringup/camera_info/turtlebot3_rpicamera.yaml"/> -->
+    <param name="camera_info_url" value="file:///home/liphy/fred_ws/cal.yml"/>
   </node>
  
 </launch>

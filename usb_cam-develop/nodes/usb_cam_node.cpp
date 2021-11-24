@@ -116,6 +116,8 @@ public:
     node_.param("camera_frame_id", img_.header.frame_id, std::string("head_camera"));
     node_.param("camera_name", camera_name_, std::string("head_camera"));
     node_.param("camera_info_url", camera_info_url_, std::string(""));
+
+    // f: here the camera_info_url_ will be init as the url and in the 
     cinfo_.reset(new camera_info_manager::CameraInfoManager(node_, camera_name_, camera_info_url_));
 
     // create Services
@@ -123,7 +125,7 @@ public:
     service_stop_ = node_.advertiseService("stop_capture", &UsbCamNode::service_stop_cap, this);
 
     // check for default camera info
-    if (!cinfo_->isCalibrated())
+    if (!cinfo_->isCalibrated())  // f: by evalutating this statement, the camera_info_url (yaml file) is 
     {
       cinfo_->setCameraName(video_device_name_);
       sensor_msgs::CameraInfo camera_info;
@@ -231,7 +233,7 @@ public:
     // grab the image
     cam_.grab_image(&img_);
 
-    // grab the camera info
+    // grab the camera info, f: including camera_info_url
     sensor_msgs::CameraInfoPtr ci(new sensor_msgs::CameraInfo(cinfo_->getCameraInfo()));
     ci->header.frame_id = img_.header.frame_id;
     ci->header.stamp = img_.header.stamp;

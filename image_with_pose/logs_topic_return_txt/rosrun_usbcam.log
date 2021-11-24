@@ -1,0 +1,65 @@
+// Nov 22: I record this log when the fps is at 30 and it always crash... Turns out with image_with_pose node, the fps should be set as 10 to relieve comp burden to avoid crashing
+
+spawn ssh ubuntu@192.168.0.101
+
+ubuntu@192.168.0.101
+'s password: 
+Welcome to Ubuntu 16.04.5 LTS (GNU/Linux 4.9.80-v7+ armv7l)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/advantage
+
+711 packages can be updated.
+259 updates are security updates.
+
+New release '18.04.6 LTS' available.
+Run 'do-release-upgrade' to upgrade to it.
+
+Last login: Mon Nov 22 17:04:15 2021 from 192.168.0.200
+ubuntu@Turtlebot3:~$ roslaunch usb_cam usb_cam-test.launch
+... logging to /home/ubuntu/.ros/log/29a942a2-4b73-11ec-801c-e4a7a05ea132/roslaunch-Turtlebot3-1901.log
+Checking log directory for disk usage. This may take awhile.
+Press Ctrl-C to interrupt
+Done checking log file disk usage. Usage is <1GB.
+
+started roslaunch server http://192.168.0.101:43169/
+
+SUMMARY
+========
+
+PARAMETERS
+ * /image_view/autosize: True
+ * /rosdistro: kinetic
+ * /rosversion: 1.12.14
+ * /usb_cam/camera_frame_id: usb_cam
+ * /usb_cam/image_height: 480
+ * /usb_cam/image_width: 640
+ * /usb_cam/io_method: mmap
+ * /usb_cam/pixel_format: yuyv
+ * /usb_cam/video_device: /dev/video0
+
+NODES
+  /
+    image_view (image_view/image_view)
+    usb_cam (usb_cam/usb_cam_node)
+
+ROS_MASTER_URI=http://192.168.0.200:11311
+
+process[usb_cam-1]: started with pid [1959]
+process[image_view-2]: started with pid [1960]
+QXcbConnection: Could not connect to display 
+[image_view-2] process has died [pid 1960, exit code -6, cmd /opt/ros/kinetic/lib/image_view/image_view image:=/usb_cam/image_raw __name:=image_view __log:=/home/ubuntu/.ros/log/29a942a2-4b73-11ec-801c-e4a7a05ea132/image_view-2.log].
+log file: /home/ubuntu/.ros/log/29a942a2-4b73-11ec-801c-e4a7a05ea132/image_view-2*.log
+[ INFO] [1637571865.723265031]: using default calibration URL
+[ INFO] [1637571865.723625915]: camera calibration URL: file:///home/ubuntu/.ros/camera_info/head_camera.yaml
+[ INFO] [1637571865.727788446]: Unable to open camera calibration file [/home/ubuntu/.ros/camera_info/head_camera.yaml]
+[ WARN] [1637571865.727973602]: Camera calibration file /home/ubuntu/.ros/camera_info/head_camera.yaml not found.
+[ INFO] [1637571865.728097039]: Starting 'head_camera' (/dev/video0) at 640x480 via mmap (yuyv) at 30 FPS
+[ERROR] [1637571865.728292715]: Cannot identify '/dev/video0': 2, No such file or directory
+[usb_cam-1] process has died [pid 1959, exit code 1, cmd /opt/ros/kinetic/lib/usb_cam/usb_cam_node __name:=usb_cam __log:=/home/ubuntu/.ros/log/29a942a2-4b73-11ec-801c-e4a7a05ea132/usb_cam-1.log].
+log file: /home/ubuntu/.ros/log/29a942a2-4b73-11ec-801c-e4a7a05ea132/usb_cam-1*.log
+all processes on machine have died, roslaunch will exit
+shutting down processing monitor...
+... shutting down processing monitor complete
+done
