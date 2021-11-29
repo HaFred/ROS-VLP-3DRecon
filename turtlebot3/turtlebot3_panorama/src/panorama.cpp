@@ -48,287 +48,292 @@
 namespace turtlebot_panorama
 {
 
-PanoApp::PanoApp() : nh(), priv_nh("~")
-{
-
-}
-
-PanoApp::~PanoApp()
-{
-
-}
-
-void PanoApp::init()
-{
-  //***************************
-  // public API for the app
-  //***************************
-  srv_start_pano = priv_nh.advertiseService("take_pano", &PanoApp::takePanoServiceCb, this);
-
-  image_transport::ImageTransport it_priv(priv_nh);
-  pub_stitched = it_priv.advertise("panorama", 1, true);
-
-  image_transport::ImageTransport it(nh);
-  sub_camera = it.subscribe("usb_cam/image_raw", 1, &PanoApp::cameraImageCb, this);
-
-  //***************************
-  // Robot control
-  //***************************
-  pub_cmd_vel = nh.advertise<geometry_msgs::Twist>("cmd_vel", 100);
-  sub_odom = nh.subscribe("odom", 100, &PanoApp::odomCb, this);
-
-  cmd_vel.linear.x = 0.0f;
-  cmd_vel.linear.y = 0.0f;
-  cmd_vel.linear.z = 0.0f;
-  cmd_vel.angular.x = 0.0f;
-  cmd_vel.angular.y = 0.0f;
-  cmd_vel.angular.z = 0.0f;
-  zero_cmd_vel = cmd_vel;
-  is_active = false;
-  continuous = false;
-  ang_vel_cur = 0.0;
-  given_angle = 0.0;
-  angle = 0.0;
-  last_angle = 0.0;
-}
-
-void PanoApp::spin()
-{
-  ros::Rate loop_rate(10);
-  double start_time;
-  start_time = 0.0;
-  bool take_snapshot = false;
-
-  while (ros::ok())
+  PanoApp::PanoApp() : nh(), priv_nh("~")
   {
-    if (is_active)
+
+  }
+
+  PanoApp::~PanoApp()
+  {
+
+  }
+
+  void PanoApp::init()
+  {
+    //***************************
+    // public API for the app
+    //***************************
+    // because of the priv_nh, when calling this srv, need the prefix in the name. And this service deal with parameters from the rosservice call cmd
+    srv_start_pano = priv_nh.advertiseService("take_pano", &PanoApp::takePanoServiceCb, this);
+
+    // priv nh makes the panorama image topic unavailable for the external frame viewer?
+    image_transport::ImageTransport it_priv(priv_nh);
+    pub_stitched = it_priv.advertise("panorama", 1, true);
+
+    image_transport::ImageTransport it(nh);
+    sub_camera = it.subscribe("usb_cam/image_raw", 1, &PanoApp::cameraImageCb, this);
+
+    //***************************
+    // Robot control
+    //***************************
+    pub_cmd_vel = nh.advertise<geometry_msgs::Twist>("cmd_vel", 100);
+    sub_odom = nh.subscribe("odom", 100, &PanoApp::odomCb, this);
+
+    cmd_vel.linear.x = 0.0f;
+    cmd_vel.linear.y = 0.0f;
+    cmd_vel.linear.z = 0.0f;
+    cmd_vel.angular.x = 0.0f;
+    cmd_vel.angular.y = 0.0f;
+    cmd_vel.angular.z = 0.0f;
+    zero_cmd_vel = cmd_vel;
+    is_active = false;
+    continuous = false;
+    ang_vel_cur = 0.0;
+    given_angle = 0.0;
+    angle = 0.0;
+    last_angle = 0.0;
+  }
+
+  void PanoApp::spin()
+  {
+    ros::Rate loop_rate(10);
+    double start_time;
+    start_time = 0.0;
+    bool take_snapshot = false;
+
+    while (ros::ok())
     {
-      ROS_INFO_STREAM_THROTTLE(1.0, "Degrees to go: " << radians_to_degrees(std::abs(given_angle - angle)));
-      if ((given_angle - angle) <= 0.0174) // check, if target angle is reached (< 1 degree)
+      if (is_active)
       {
-        snap();
-
-        pub_cmd_vel.publish(zero_cmd_vel);
-
-        ROS_INFO("Stiching %lu images", images_.size());
-
-        cv::Mat pano;
-        cv::Stitcher stitcher = cv::Stitcher::createDefault(false);
-        cv::Stitcher::Status status = stitcher.stitch(images_, pano);
-        log("Finished Stiching");
-
-        cv_bridge::CvImage cv_img;
-        cv_img.image = pano;
-        cv_img.encoding = "bgr8";
-        cv_img.header.stamp = ros::Time::now();
-        pub_stitched.publish(cv_img.toImageMsg());
-        log("Publishing Completed Panorama");
-        ROS_INFO("Angle: %f", angle); 
-        ROS_INFO("Last Angle: %f", last_angle); 
-       	angle=0.0;
-        last_angle=0.0;
-	      images_.clear();
-        imwrite("pano.jpg", pano);
-        is_active = false;
-      }
-      else
-      {
-        if (continuous) // then snap_interval is a duration
+        ROS_INFO_STREAM_THROTTLE(1.0, "Degrees to go: " << radians_to_degrees(std::abs(given_angle - angle)));
+        if ((given_angle - angle) <= 0.0174) // check, if target angle is reached (< 1 degree)
         {
-    	    log("Continuous Mode panorama");
-          rotate();
-          ros::Duration(snap_interval).sleep();
           snap();
-          ROS_INFO("Angle Continuous: %f", angle); 
-          ROS_INFO("Angle Given: %f", given_angle); 
+
+          pub_cmd_vel.publish(zero_cmd_vel);
+
+          ROS_INFO("Stitching %lu images", images_.size());
+
+          cv::Mat pano;
+          cv::Stitcher stitcher = cv::Stitcher::createDefault(false);
+          cv::Stitcher::Status status = stitcher.stitch(images_, pano);
+          log("Finished Stiching");
+
+          cv_bridge::CvImage cv_img;
+          cv_img.image = pano;
+          cv_img.encoding = "bgr8";
+          cv_img.header.stamp = ros::Time::now();
+          pub_stitched.publish(cv_img.toImageMsg());
+          log("Publishing Completed Panorama");
+          ROS_INFO("Angle: %f", angle); 
+          ROS_INFO("Last Angle: %f", last_angle); 
+          angle=0.0;
+          last_angle=0.0;
+          images_.clear();
+          imwrite("pano.jpg", pano);
+          is_active = false;
         }
         else
         {
-          if (hasReachedAngle())
+          if (continuous) // bool internal mode flag, then snap_interval is a duration
           {
-            pub_cmd_vel.publish(zero_cmd_vel); // stop before taking a snapshot
-            take_snapshot = true;
+            log("Continuous Mode panorama");
+            rotate();
+            ros::Duration(snap_interval).sleep();
+            snap();
+            ROS_INFO("Angle Continuous: %f", angle); 
+            ROS_INFO("Angle Given: %f", given_angle); 
           }
-          if (take_snapshot)
-          {
-            if (std::abs(ang_vel_cur) <= 0.01) // wait until robot has stopped
+          else
+          { // in the snapandrotate mode
+            if (hasReachedAngle())
             {
-              snap();
-              take_snapshot = false;
+              pub_cmd_vel.publish(zero_cmd_vel); // stop before taking a snapshot
+              take_snapshot = true;
+            }
+            if (take_snapshot)
+            {
+              if (std::abs(ang_vel_cur) <= 0.01) // wait until robot has stopped
+              {
+                snap();
+                take_snapshot = false;
+              }
+              else
+              {
+                std::stringstream ss;
+                std::string str;
+                ss << "Waiting for robot to stop ... (speed = " << ang_vel_cur << ")";
+                str = ss.str();
+                log(str);
+              }
             }
             else
             {
-              std::stringstream ss;
-              std::string str;
-              ss << "Waiting for robot to stop ... (speed = " << ang_vel_cur << ")";
-              str = ss.str();
-              log(str);
+              rotate();
             }
-          }
-          else
-          {
-            rotate();
           }
         }
       }
+      ros::spinOnce();
+      loop_rate.sleep();
     }
+  }
+
+  void PanoApp::snap()
+  {
+    log("snap");
+    store_image = true;
     ros::spinOnce();
-    loop_rate.sleep();
-  }
-}
-
-void PanoApp::snap()
-{
-  log("snap");
-  store_image = true;
-  ros::spinOnce();
-  ros::Duration(1.0).sleep();
-}
-
-void PanoApp::rotate()
-{
-  log("rotate");
-  pub_cmd_vel.publish(cmd_vel); // rotate a bit
-}
-
-bool PanoApp::hasReachedAngle()
-{
-  if (angle > last_angle + degrees_to_radians(snap_interval))
-  {
-    last_angle = angle;
-    return true;
-  }
-  else
-  {
-    return false;
-  }
-}
-
-void PanoApp::odomCb(const nav_msgs::OdometryConstPtr& msg)
-{
-  static double heading_last = 0.0f;
-  double heading = 0.0f;
-
-  Eigen::AngleAxisf angle_axis(Eigen::Quaternionf(msg->pose.pose.orientation.w,
-                                                  msg->pose.pose.orientation.x,
-                                                  msg->pose.pose.orientation.y,
-                                                  msg->pose.pose.orientation.z));
-  Eigen::Vector3f axis = angle_axis.axis();
-
-  if (axis(2) > 0.0)
-  {
-    heading = angle_axis.angle();
-  }
-  else if (axis(2) < 0.0)
-  {
-    heading = -1.0 * angle_axis.angle();
+    ros::Duration(1.0).sleep();
   }
 
-  angle += std::abs(wrap_angle(heading - heading_last));
-  heading_last = heading;
-  ang_vel_cur = msg->twist.twist.angular.z;
-}
+  void PanoApp::rotate()
+  {
+    log("rotate");
+    pub_cmd_vel.publish(cmd_vel); // rotate a bit
+  }
 
-//*************************
-// Public interface
-//*************************
-bool PanoApp::takePanoServiceCb(turtlebot3_applications_msgs::TakePanorama::Request& request,
-                                turtlebot3_applications_msgs::TakePanorama::Response& response)
-{
-  if (is_active && (request.mode == request.CONTINUOUS || request.mode == request.SNAPANDROTATE))
+  // in the snapandrotate mode
+  bool PanoApp::hasReachedAngle()
   {
-    log("Panorama creation already in progress.");
-    response.status = request.IN_PROGRESS;
-  }
-  else if (is_active && (request.mode == request.STOP))
-  {
-    is_active = false;
-    log("Panorama creation stopped.");
-    response.status = request.STOPPED;
-    return true;
-  }
-  else if (!is_active && (request.mode == request.STOP))
-  {
-    log("No panorama creation in progress.");
-    response.status = request.STOPPED;
-    return true;
-  }
-  else
-  {
-    if (request.pano_angle <= 0.0)
+    if (angle > last_angle + degrees_to_radians(snap_interval))
     {
-      log("Specified panorama angle is zero or negative! Panorama creation aborted.");
-      return true;
-    }
-    else if (request.snap_interval <= 0.0)
-    {
-      log("Specified snapshot interval is zero or negative! Panorama creation aborted.");
-      return true;
-    }
-    else if (request.rot_vel == 0.0)
-    {
-      log("Specified rotating speed is zero! Panorama creation aborted.");
+      last_angle = angle;
       return true;
     }
     else
     {
-      given_angle = degrees_to_radians(request.pano_angle);
-      snap_interval = request.snap_interval;
-      cmd_vel.angular.z = request.rot_vel;
+      return false;
     }
-    if (request.mode == turtlebot3_applications_msgs::TakePanoramaRequest::CONTINUOUS)
+  }
+
+  void PanoApp::odomCb(const nav_msgs::OdometryConstPtr& msg)
+  {
+    static double heading_last = 0.0f;
+    double heading = 0.0f;
+
+    Eigen::AngleAxisf angle_axis(Eigen::Quaternionf(msg->pose.pose.orientation.w,
+                                                    msg->pose.pose.orientation.x,
+                                                    msg->pose.pose.orientation.y,
+                                                    msg->pose.pose.orientation.z));
+    Eigen::Vector3f axis = angle_axis.axis();
+
+    if (axis(2) > 0.0)
     {
-      continuous = true;
+      heading = angle_axis.angle();
+    }
+    else if (axis(2) < 0.0)
+    {
+      heading = -1.0 * angle_axis.angle();
+    }
+
+    angle += std::abs(wrap_angle(heading - heading_last));
+    heading_last = heading;
+    ang_vel_cur = msg->twist.twist.angular.z;
+  }
+
+  //*************************
+  // Public interface
+  //*************************
+  bool PanoApp::takePanoServiceCb(turtlebot3_applications_msgs::TakePanorama::Request& request,
+                                  turtlebot3_applications_msgs::TakePanorama::Response& response)
+  {
+    if (is_active && (request.mode == request.CONTINUOUS || request.mode == request.SNAPANDROTATE))
+    {
+      log("Panorama creation already in progress.");
+      response.status = request.IN_PROGRESS;
+    }
+    else if (is_active && (request.mode == request.STOP))
+    {
+      is_active = false;
+      log("Panorama creation stopped.");
+      response.status = request.STOPPED;
+      return true;
+    }
+    else if (!is_active && (request.mode == request.STOP))
+    {
+      log("No panorama creation in progress.");
+      response.status = request.STOPPED;
+      return true;
     }
     else
     {
-      continuous = false;
+      if (request.pano_angle <= 0.0)
+      {
+        log("Specified panorama angle is zero or negative! Panorama creation aborted.");
+        return true;
+      }
+      else if (request.snap_interval <= 0.0)
+      {
+        log("Specified snapshot interval is zero or negative! Panorama creation aborted.");
+        return true;
+      }
+      else if (request.rot_vel == 0.0)
+      {
+        log("Specified rotating speed is zero! Panorama creation aborted.");
+        return true;
+      }
+      else
+      {
+        given_angle = degrees_to_radians(request.pano_angle);
+        snap_interval = request.snap_interval;
+        ROS_INFO("F: Current snap_interval: %f degrees", snap_interval);
+        cmd_vel.angular.z = request.rot_vel;
+      }
+      if (request.mode == turtlebot3_applications_msgs::TakePanoramaRequest::CONTINUOUS)
+      {
+        continuous = true;
+      }
+      else
+      {
+        continuous = false;
+      }
+      log("Starting panorama creation.");
+      // startPanoAction();
+      is_active = true;
+      response.status = request.STARTED;
     }
-    log("Starting panorama creation.");
-    // startPanoAction();
-    is_active = true;
-    response.status = request.STARTED;
+    return true;
   }
-  return true;
-}
 
-void PanoApp::cameraImageCb(const sensor_msgs::ImageConstPtr& msg)
-{
-  if (store_image)
+  void PanoApp::cameraImageCb(const sensor_msgs::ImageConstPtr& msg)
   {
-    std::cout << "encoding: " << msg->encoding << std::endl;
-    std::cout << "is_bigendian: " << msg->is_bigendian << std::endl;
-
-    cv_bridge::CvImagePtr cv_ptr;
-
-    try
+    if (store_image)
     {
-      cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-    }
-    catch (cv_bridge::Exception& e)
-    {
-      ROS_ERROR("cv_bridge exception: %s", e.what());
-      return;
-    }
+      std::cout << "encoding: " << msg->encoding << std::endl;
+      std::cout << "is_bigendian: " << msg->is_bigendian << std::endl;
 
-    images_.push_back(cv_ptr->image);
-    store_image = false;
+      cv_bridge::CvImagePtr cv_ptr;
+
+      try
+      {
+        cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+      }
+      catch (cv_bridge::Exception& e)
+      {
+        ROS_ERROR("cv_bridge exception: %s", e.what());
+        return;
+      }
+
+      images_.push_back(cv_ptr->image);
+      store_image = false;
+    }
+    else 
+    {
+      // ROS_INFO("F: Cameraimagecb store_image is false, standby...");
+      //pub_stitched.publish(msg);
+    }
   }
-  else 
+
+  //*************
+  // Logging
+  //*************
+  void PanoApp::log(std::string log)
   {
-    //pub_stitched.publish(msg);
+    std_msgs::String msg;
+    msg.data = log;
+    ROS_INFO_STREAM(log);
   }
-}
-
-//*************
-// Logging
-//*************
-void PanoApp::log(std::string log)
-{
-  std_msgs::String msg;
-  msg.data = log;
-  ROS_INFO_STREAM(log);
-}
 } //namespace turtlebot_panorama
 
 int main(int argc, char **argv)

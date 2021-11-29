@@ -58,6 +58,19 @@
   <exec_depend>opencv</exec_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>std_msgs</exec_depend>
+  <depend>cv_bridge</depend>
+  <depend>rospy</depend>
+  <depend>std_srvs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>turtlebot3_applications_msgs</depend>
+  <depend>image_transport</depend>
+  <depend>cmake_modules</depend>
+  <depend>eigen</depend>
+  <exec_depend>turtlebot3_bringup</exec_depend>
+
+
 
 
   <!-- The export tag contains other, unspecified, tags -->

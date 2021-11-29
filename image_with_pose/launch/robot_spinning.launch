@@ -1,0 +1,13 @@
+<launch>
+  <!-- Camera Image Transport to raw--> I
+  <!-- <node pkg="image_transport" type="republish" name="republish" output="screen" args="compressed in:=/usb_cam/image_raw raw out:=/usb_cam/image_raw" /> -->
+
+  <node pkg="image_with_pose" type="image_with_pose" name="robot_spinning" respawn="false" output="screen">
+    <param name="default_mode" value="0"/>
+    <param name="default_pano_angle" value="6.28318530718"/> <!-- 2 * Pi, degree for de_snap_int -->
+    <param name="default_snap_interval" value="5.0"/> 
+    <param name="default_rotation_velocity" value="0.09"/>
+    <param name="camera_name" value="usb_cam"/>
+    <param name="bag_location" value="/tmp/image_with_pose/robot_spinning.bag"/>   
+  </node>
+</launch>

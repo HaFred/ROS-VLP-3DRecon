@@ -32,7 +32,7 @@ using namespace std;
 
 #define SAVE_PATH "/home/liphy/catkin_ws/src/image_with_pose/captured_images/"
 
-// // global var latestPose odom (base_footprint->odom), we use its rotation in the pose
+// global var latestPose odom (base_footprint->odom), we use its rotation in the transformStamped meg as the pose
 geometry_msgs::TransformStamped latestPoseFromOdom;
 
 // global var latestPose EKF (odom->map), we use its positioning in the pose
@@ -140,8 +140,8 @@ int main(int argc, char** argv)
     ros::NodeHandle nh;
 
     // tf2_listener adpatation, using the listener to subscribe tf
-    tf2_ros::Buffer tfBufferOdom;
-    tf2_ros::TransformListener tfListenerOdom(tfBufferOdom);
+    tf2_ros::Buffer tfBuffer;
+    tf2_ros::TransformListener tfListener(tfBuffer);
 
     // tf2_ros::Buffer tfBufferEKF;
     // tf2_ros::TransformListener tfListenerEKF(tfBufferEKF);
@@ -158,9 +158,9 @@ int main(int argc, char** argv)
         try{
             // fixme: is the source odom or map??? No, then it will be no transform, namely, every quat is w=1 and no translation...
             // lookupTransform (const std::string &target_frame, const std::string &source_frame, const ros::Time &time, const ros::Duration timeout=ros::Duration(0.0)) const
-            latestPoseFromOdom = tfBufferOdom.lookupTransform("odom", "base_footprint", ros::Time(0));
+            latestPoseFromOdom = tfBuffer.lookupTransform("odom", "base_footprint", ros::Time(0));
             cout<<"Pose from Odom listener passed."<<endl;
-			latestPoseFromEKF = tfBufferOdom.lookupTransform("map", "odom", ros::Time(0));
+			latestPoseFromEKF = tfBuffer.lookupTransform("map", "odom", ros::Time(0));
             cout<<"Pose from EKF listener passed."<<endl;
 
             // hardcoded the pose_is_updated as true for now

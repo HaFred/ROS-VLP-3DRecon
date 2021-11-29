@@ -86,6 +86,7 @@ private:
   std::map<std::string, std::string> params;
 
   geometry_msgs::Twist cmd_vel, zero_cmd_vel;
+  bool data_cap_en;
   double snap_interval;
   double angle, last_angle, given_angle, ang_vel_cur;
 
@@ -98,6 +99,7 @@ private:
 
   // for turning the robot
   ros::Publisher pub_cmd_vel;
+  
   // for retrieving the odometry of robot
   ros::Subscriber sub_odom;
 
