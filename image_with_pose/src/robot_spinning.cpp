@@ -83,7 +83,7 @@
                     // halt the robot for spinning 180 degree
                     pub_cmd_vel.publish(zero_cmd_vel);
                     data_cap_en.data = true;
-                    // pub_to_image_with_pose.publish(data_cap_en.data);
+                    pub_to_image_with_pose.publish(data_cap_en);
                     ROS_INFO("F: Publishing the data capturing enabling signal to image_with_pose node");
                     log("Finished Semicircle Data Cap");
 

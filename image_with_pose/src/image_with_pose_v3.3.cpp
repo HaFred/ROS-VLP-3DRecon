@@ -1,6 +1,5 @@
 /* v3.3 tries the tf::TransformListener method with slovlp_ekf_info topic subscription together.
-        It also saves the pose matrix from vlp and ekf_tf into 2 different folders.
-        Note that 3.3 is not make and tested yet...
+        It also saves the pose matrix from vlp and ekf_tf into 2 different folders. Note that 3.3 is not make and tested yet...
  */
 
 #include <ros/ros.h>

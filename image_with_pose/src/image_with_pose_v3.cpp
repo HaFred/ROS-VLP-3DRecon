@@ -117,8 +117,6 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg) // these msg are setup
     }else{
         cout<<"Image was not saved, becasue pose was not updated. Try again."<<endl;
     }
-
-
 }
 
 // Function to save the current pose with time_stamp in a text file

@@ -66,7 +66,7 @@ namespace turtlebot_panorama
     // because of the priv_nh, when calling this srv, need the prefix in the name. And this service deal with parameters from the rosservice call cmd
     srv_start_pano = priv_nh.advertiseService("take_pano", &PanoApp::takePanoServiceCb, this);
 
-    // priv nh makes the panorama image topic unavailable for the external frame viewer?
+    // priv nh makes the panorama image topic unavailable for the external frame viewer
     image_transport::ImageTransport it_priv(priv_nh);
     pub_stitched = it_priv.advertise("panorama", 1, true);
 

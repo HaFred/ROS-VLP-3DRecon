@@ -36,7 +36,7 @@ catkin_package(
 include_directories(
  include
   ${catkin_INCLUDE_DIRS}
-  # robot spin
+  # robot spin below
   ${Boost_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIRS}
 )
@@ -46,12 +46,13 @@ link_directories(
  ${catkin_LIB_DIRS} 
 )
 
-# add_executable(${PROJECT_NAME} src/image_with_pose_v3.4.cpp)
+add_executable(image_with_pose src/image_with_pose_v3.4.cpp)
 # add_executable(${PROJECT_NAME} src/image_with_pose.cpp)
-add_executable(${PROJECT_NAME} src/robot_spinning.cpp)
 # add_dependencies(turtlebot3_panorama ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(image_with_pose ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${Boost_LIBRARIES} ${Eigen3_LIBRARIES})
 
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${Boost_LIBRARIES} ${Eigen3_LIBRARIES})
+add_executable(robot_spinning src/robot_spinning.cpp)
+target_link_libraries(robot_spinning ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${Boost_LIBRARIES} ${Eigen3_LIBRARIES})
 
 #add_executable(image_with_pose src/image_with_pose.cpp)
 #target_link_libraries(image_with_pose ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} )
