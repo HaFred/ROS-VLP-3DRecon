@@ -150,10 +150,14 @@ int main(int argc, char** argv)
     image_transport::ImageTransport it(nh);
     image_transport::Subscriber sub = it.subscribe("usb_cam/image_raw", 1, imageCallback); // the size of the publisher queue is set to 1
 
+    // multi-threaded spinnning
     while (nh.ok()){
-        ROS_INFO("Press a key to capture image");
-        int c = std::cin.get();
+        // thread 1, spin for the enable signal
 
+        // ROS_INFO("Press a key to capture image");
+        // int c = std::cin.get();
+
+        // thread 2, spin for the tflistener
         // tf2_listener adpatation
         try{
             // fixme: is the source odom or map??? No, then it will be no transform, namely, every quat is w=1 and no translation...

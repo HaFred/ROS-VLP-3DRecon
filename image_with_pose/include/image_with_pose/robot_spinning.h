@@ -27,6 +27,10 @@
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 
+#include <tf2_ros/transform_listener.h>
+#include <geometry_msgs/TransformStamped.h>
+#include <std_msgs/Bool.h>
+
 namespace robot_spinning
 {
     /*****************************************************************************
@@ -73,7 +77,8 @@ namespace robot_spinning
 
             void init();
             void spin();
-            void trans(); // the translation function 
+            // void trans(); // the translation function 
+            void itAndListenerInit();
 
             /**
             * Additionally sends out logging information on a ROS topic
@@ -82,7 +87,6 @@ namespace robot_spinning
             void log(std::string msg);
 
         private:
-            ros::NodeHandle nh;
             ros::NodeHandle priv_nh;
             std::map<std::string, std::string> params;
 
@@ -92,8 +96,6 @@ namespace robot_spinning
             
             // these are placeholders for the translation part
             // double trans, last_angle, given_angle, ang_vel_cur;
-
-            bool continuous; // f: is it a flag?
             
             image_transport::Publisher pub_image_with_pose;
             image_transport::Subscriber sub_camera;
@@ -115,7 +117,7 @@ namespace robot_spinning
             * turns true, when the spin_ros action goal goes active
             */
             bool is_active;
-            std_msgs::Bool data_cap_en;
+            std_msgs::Bool data_cap_en_msg;
 
             /**
             * Tells the spin_ros feedback callback to set is_active to true (starts rotating the robot)
@@ -144,7 +146,7 @@ namespace robot_spinning
             * @param response the current state of the app (started, in progress, stopped)
             * @return true, if service call was successful
             */
-            bool DoRobotSpinServiceCb(turtlebot3_applications_msgs::TakePanorama::Request& request, turtlebot3_applications_msgs::TakePanorama::Response& response);
+            bool doRobotSpinServiceCb(turtlebot3_applications_msgs::TakePanorama::Request& request, turtlebot3_applications_msgs::TakePanorama::Response& response);
 
             void snap();
             void rotate();
@@ -154,6 +156,12 @@ namespace robot_spinning
             void odomCb(const nav_msgs::OdometryConstPtr& msg);
             void startSpinAction();
             void cameraImageCb(const sensor_msgs::ImageConstPtr& msg);
+
+            // for robot_spinning_cap_data node, used in imageCallback
+            void saveCurrentPose(std::string& current_time_stamp);
+            ros::NodeHandle nh;
+            tf2_ros::Buffer tfBuffer;
+            void imageCallback(const sensor_msgs::ImageConstPtr& msg);
     };
 } // namespace robot_spinning
 

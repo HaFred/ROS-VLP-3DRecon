@@ -51,9 +51,11 @@ add_executable(image_with_pose src/image_with_pose_v3.4.cpp)
 # add_dependencies(turtlebot3_panorama ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(image_with_pose ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${Boost_LIBRARIES} ${Eigen3_LIBRARIES})
 
-add_executable(robot_spinning src/robot_spinning.cpp)
-target_link_libraries(robot_spinning ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${Boost_LIBRARIES} ${Eigen3_LIBRARIES})
+# add_executable(sub_to_rs src/sub_to_rs.cpp)
+# target_link_libraries(sub_to_rs ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${Boost_LIBRARIES} ${Eigen3_LIBRARIES})
+
+# add_executable(robot_spinning src/robot_spinning.cpp)
+# target_link_libraries(robot_spinning ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${Boost_LIBRARIES} ${Eigen3_LIBRARIES})
 
 #add_executable(image_with_pose src/image_with_pose.cpp)
 #target_link_libraries(image_with_pose ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} )
-

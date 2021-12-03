@@ -209,6 +209,7 @@ namespace turtlebot_panorama
 
   void PanoApp::odomCb(const nav_msgs::OdometryConstPtr& msg)
   {
+    ROS_INFO("odom cb is activated");
     static double heading_last = 0.0f;
     double heading = 0.0f;
 
@@ -298,6 +299,7 @@ namespace turtlebot_panorama
 
   void PanoApp::cameraImageCb(const sensor_msgs::ImageConstPtr& msg)
   {
+    ROS_INFO("camera image cb is activated");
     if (store_image)
     {
       std::cout << "encoding: " << msg->encoding << std::endl;

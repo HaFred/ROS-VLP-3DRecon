@@ -1,3 +1,0 @@
-http://sun3d.cs.princeton.edu/data/Portland_hotel/depth/0000001-000000000000.png
-http://sun3d.cs.princeton.edu/data/Portland_hotel/depth/0000002-000000033464.png
-http://sun3d.cs.princeton.edu/data/Portland_hotel/depth/0000003-000000066929.png

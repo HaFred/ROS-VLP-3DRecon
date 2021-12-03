@@ -8,22 +8,22 @@
  * @author HaFred
  **/
 
- #include <cmath>
- #include <iostream>
- #include <eigen3/Eigen/Core>
- #include <eigen3/Eigen/Geometry>
- #include <image_transport/image_transport.h>
- #include <cv_bridge/cv_bridge.h>
+#include <cmath>
+#include <iostream>
+#include <eigen3/Eigen/Core>
+#include <eigen3/Eigen/Geometry>
+#include <image_transport/image_transport.h>
+#include <cv_bridge/cv_bridge.h>
 
- // to be deleted
+// to be deleted
 //  #include <turtlebot3_panorama/panorama.h>
 
- #include <image_with_pose/robot_spinning.h>
+#include <image_with_pose/robot_spinning.h>
 
- namespace robot_spinning
- {
+namespace robot_spinning
+{
 
-    SpinApp::SpinApp() : nh(), priv_nh("~") // make it priv
+    SpinApp::SpinApp() : nh(), priv_nh("~") // make priv_nh priv when access
     {}
 
     SpinApp::~SpinApp()
@@ -36,9 +36,9 @@
          public api for the app 
         ****************************/
         // because of the priv_nh, when calling this srv, need the prefix in the name. And this service deal with parameters from the rosservice call cmd
-        srv_start_spin = priv_nh.advertiseService("spin_srv", &SpinApp::DoRobotSpinServiceCb, this); // object to call srv_func on
+        srv_start_spin = priv_nh.advertiseService("spin_srv", &SpinApp::doRobotSpinServiceCb, this); // object to call srv_func on
 
-        pub_to_image_with_pose = nh.advertise<std_msgs::Bool>("pub_to_image_with_pose", 1, true); // queue 1, true for latch, no subscriber for this topic is required
+        pub_to_image_with_pose = nh.advertise<std_msgs::Bool>("ensig_to_image_with_pose", 100, false); // topic name; queue 100 because the rotating takes time, and it delays the publishment; false for latch, because true latch may lead to messed up mesg sequence
 
         // should not it be sub to image_with_pose node? No, I would suggest this ro_spin node just publishes an enable signal to the image_with_pose node, to record data. And this ro_spin node does not subscribe to usb_cam anymore (as in the panorama node)
         // image_transport::ImageTransport it(nh);
@@ -57,7 +57,7 @@
         cmd_vel.angular.y = 0.0f;
         cmd_vel.angular.z = 0.0f;
         zero_cmd_vel = cmd_vel;
-        data_cap_en.data = false;
+        data_cap_en_msg.data = false;
         is_active = false;
         continuous = false;
         ang_vel_cur = 0.0;
@@ -82,8 +82,8 @@
                     snap();
                     // halt the robot for spinning 180 degree
                     pub_cmd_vel.publish(zero_cmd_vel);
-                    data_cap_en.data = true;
-                    pub_to_image_with_pose.publish(data_cap_en);
+                    data_cap_en_msg.data = false;
+                    pub_to_image_with_pose.publish(data_cap_en_msg);
                     ROS_INFO("F: Publishing the data capturing enabling signal to image_with_pose node");
                     log("Finished Semicircle Data Cap");
 
@@ -109,8 +109,8 @@
                         if (hasReachedAngle())
                         {
                             pub_cmd_vel.publish(zero_cmd_vel); // stop before taking a snapshot when angle reached 
-                            data_cap_en.data = true;
-                            // pub_to_image_with_pose.publish(data_cap_en.data);
+                            data_cap_en_msg.data = false;
+                            // pub_to_image_with_pose.publish(data_cap_en_msg.data);
                             ROS_INFO("F: Publishing the data capturing enabling signal to image_with_pose node");
                             take_snapshot = true;
                         }
@@ -119,8 +119,8 @@
                             if (std::abs(ang_vel_cur) <= 0.01) // wait until robot has stopped
                             {
                                 snap(); // ask the process to handle the callback with the spinning once and consume 1 sec
-                                data_cap_en.data = true;
-                                // pub_image_with_pose.publish(data_cap_en.data);
+                                data_cap_en_msg.data = false;
+                                // pub_image_with_pose.publish(data_cap_en_msg.data);
                                 ROS_INFO("F: Publishing the data capturing enabling signal to image_with_pose node");
                                 take_snapshot = false; // because the robot only stops when the rot target is achieved, by then stop taking snapshot
                             }
@@ -155,7 +155,12 @@
     {
         log("snap");
         store_image = true;
+        data_cap_en_msg.data = true;
+        pub_to_image_with_pose.publish(data_cap_en_msg);
         ros::spinOnce();
+        // data_cap_en_msg.data = false;
+        // pub_to_image_with_pose.publish(data_cap_en_msg);
+        // ros::spinOnce();
         ros::Duration(1.0).sleep();
     }
 
@@ -211,7 +216,7 @@
     }
 
     // the msgs md5sum security parity pairs are hard to deal with, thus we borrow the request and response msgs from TakePanorama here
-    bool SpinApp::DoRobotSpinServiceCb(turtlebot3_applications_msgs::TakePanorama::Request& request, turtlebot3_applications_msgs::TakePanorama::Response& response)
+    bool SpinApp::doRobotSpinServiceCb(turtlebot3_applications_msgs::TakePanorama::Request& request, turtlebot3_applications_msgs::TakePanorama::Response& response)
     {
         if (is_active && (request.mode == request.STOP))
         {
@@ -275,10 +280,11 @@
         msg.data = log;
         ROS_INFO_STREAM(log);
     }
- } // namespace robot_spinning 
+} // namespace robot_spinning 
 
- int main(int argc, char **argv)
- {
+int main(int argc, char **argv)
+{
+    std::cout<<"Now is with robot spinning node"<<std::endl;
     ros::init(argc, argv, "robot_motion_datacap");
     robot_spinning::SpinApp spin;
     spin.log("Robot rotating for data capturing starting...");
@@ -290,4 +296,4 @@
     // spin.log("Rotating translation done, end");
 
     return 0;
- }
+}
