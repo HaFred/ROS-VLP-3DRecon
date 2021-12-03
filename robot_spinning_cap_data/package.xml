@@ -50,22 +50,15 @@
   <!--   <doc_depend>doxygen</doc_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>opencv</build_depend>
-  <build_depend>roscpp</build_depend>
-  <build_depend>std_msgs</build_depend>
-  <build_export_depend>opencv</build_export_depend>
-  <build_export_depend>roscpp</build_export_depend>
-  <build_export_depend>std_msgs</build_export_depend>
-  <exec_depend>opencv</exec_depend>
-  <exec_depend>roscpp</exec_depend>
-  <exec_depend>std_msgs</exec_depend>
-  <depend>cv_bridge</depend>
+  <depend>roscpp</depend>
   <depend>rospy</depend>
+  <depend>std_msgs</depend>
   <depend>std_srvs</depend>
   <depend>sensor_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>turtlebot3_applications_msgs</depend>
-  <depend>image_with_pose</depend>
+  <depend>cv_bridge</depend>
   <depend>image_transport</depend>
   <depend>cmake_modules</depend>
   <depend>eigen</depend>

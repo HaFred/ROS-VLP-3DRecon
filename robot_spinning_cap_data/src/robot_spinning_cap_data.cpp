@@ -37,13 +37,11 @@
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Geometry>
 #include <cv_bridge/cv_bridge.h>
-#include <image_with_pose/robot_spinning.h>
-
-using namespace cv;
+#include <robot_spinning_cap_data/robot_spinning.h>
 
 #define FIXED_Z_VALUE 0.4
 
-#define SAVE_PATH "/home/liphy/catkin_ws/src/robot_spinning_cap_data/cap_data"
+#define SAVE_PATH "/home/liphy/catkin_ws/src/robot_spinning_cap_data/cap_data/"
 
 // global var latestPose odom (base_footprint->odom), we use its rotation in the transformStamped meg as the pose
 geometry_msgs::TransformStamped latestPoseFromOdom;
@@ -61,21 +59,17 @@ namespace robot_spinning
 
     void SpinApp::init()
     { // direct class access scope resolution operator
-        
-        /****************************
-         public api for the app 
-        ****************************/
+
         // because of the priv_nh, when calling this srv, need the prefix in the name. And this service deal with parameters from the rosservice call cmd
         srv_start_spin = priv_nh.advertiseService("spin_srv", &SpinApp::doRobotSpinServiceCb, this); // object to call srv_func on
 
         // the callback for listener and it_cb is in snap()
         // tf2_listener adpatation, using the listener to subscribe tf
         tf2_ros::TransformListener tfListener(tfBuffer);
-        geometry_msgs::TransformStamped latestPoseFromOdom;
-        geometry_msgs::TransformStamped latestPoseFromEKF;
-
         image_transport::ImageTransport it(nh);
-        image_transport::Subscriber sub = it.subscribe("usb_cam/image_raw", 1, &SpinApp::imageCallback, this); // the size of the publisher queue is set to 1
+
+        // once include header and class, do not put the declaration and definition together as in iwp_v2... It may cause the sub not working
+        sub_camera = it.subscribe("usb_cam/image_raw", 1, &SpinApp::imageCb, this); // the size of the publisher queue is set to 1
         
         /****************************
          robot control
@@ -90,7 +84,6 @@ namespace robot_spinning
         cmd_vel.angular.y = 0.0f;
         cmd_vel.angular.z = 0.0f;
         zero_cmd_vel = cmd_vel;
-        data_cap_en_msg.data = false;
         is_active = false;
         ang_vel_cur = 0.0;
         given_target_angle = 0.0;
@@ -115,7 +108,6 @@ namespace robot_spinning
                     snap();
                     // halt the robot for spinning 180 degree
                     pub_cmd_vel.publish(zero_cmd_vel);
-                    data_cap_en_msg.data = false;
                     log("Finished Semicircle Data Cap");
 
                     ROS_INFO("Angle: %f", curr_angle); 
@@ -129,9 +121,7 @@ namespace robot_spinning
                     if (hasReachedAngle())
                     {
                         pub_cmd_vel.publish(zero_cmd_vel); // stop before taking a snapshot when angle reached 
-                        data_cap_en_msg.data = false;
-                        // pub_to_image_with_pose.publish(data_cap_en_msg.data);
-                        ROS_INFO("Reach: Publishing the data capturing enabling signal to image_with_pose node");
+                        ROS_INFO("Reach: hasReachedAngle");
                         take_snapshot = true;
                     }
                     if (take_snapshot) // the take_snapshot signal is true, stop and data cap
@@ -139,9 +129,7 @@ namespace robot_spinning
                         if (std::abs(ang_vel_cur) <= 0.01) // wait until robot has stopped
                         {
                             snap(); // ask the process to handle the callback with the spinning once and consume 1 sec
-                            data_cap_en_msg.data = false;
-                            // pub_image_with_pose.publish(data_cap_en_msg.data);
-                            ROS_INFO("take_snapshot: Publishing the data capturing enabling signal to image_with_pose node");
+                            ROS_INFO("take_snapshot: take_snapshot");
                             take_snapshot = false; // because the robot only stops when the rot target is achieved, by then stop taking snapshot
                         }
                         else
@@ -161,22 +149,13 @@ namespace robot_spinning
             }
             else
             {
-                ROS_INFO("In the spin(), but is_active false");
+                // ROS_INFO("In the spin(), but is_active false");
             }
             // if not active, still needs to activate the callback to make the process flowing by single-threaded spin
             ros::spinOnce();
             loop_rate.sleep();
         }
     }
-
-    // void SpinApp::itAndListenerInit()
-    // {
-    //     // the callback for listener and it_cb is in snap()
-    //     // tf2_listener adpatation, using the listener to subscribe tf
-    //     tf2_ros::TransformListener tfListener(tfBuffer);
-    //     image_transport::ImageTransport it(nh);
-    //     image_transport::Subscriber sub = it.subscribe("usb_cam/image_raw", 1, boost::bind(&SpinApp::imageCallback, this, _1)); // the size of the publisher queue is set to 1
-    // }
 
     /****************************
      priviate api for the app 
@@ -187,7 +166,6 @@ namespace robot_spinning
     {
         log("snap");
         store_image = true;
-        data_cap_en_msg.data = true;
         ros::spinOnce();
         ros::Duration(1.0).sleep();
     }
@@ -216,6 +194,7 @@ namespace robot_spinning
 
     void SpinApp::odomCb(const nav_msgs::OdometryConstPtr& msg)
     {
+        // ROS_INFO("odom cb is activated");
         static double heading_last = 0.0f; // static initialized only once, and accu
         double heading = 0.0f;
 
@@ -243,10 +222,65 @@ namespace robot_spinning
         ang_vel_cur = msg->twist.twist.angular.z;
     }
 
+    // here if you look at the src of imageTransport::Sub, usb_cam, you will find that they directly utilize: it.advertiseCamera("image_raw", 1); rather than using nh.advertise(). With the publish(const sensor_msgs::ImageConstPtr& image, ...) of it.advertiseCamera, the cb of any subs (imageCb) here can take in ImageConstPtr& image type param without requiring like nh.advertise<> setting up the msg datatype
+    void SpinApp::imageCb(const sensor_msgs::ImageConstPtr& msg) // these msg are setup to receive msg from the topic which is encoded by the publisher 
+    {
+        ROS_INFO("camera image cb is activated ********");
+        if (store_image)
+        {
+            ROS_INFO("STORE IMAGE true, Image callback received");
+
+            // **** First Convert the Sensor Msg Image to OpenCV format
+
+            cv_bridge::CvImagePtr cv_ptr;
+            try{
+                    cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+            }
+            catch (cv_bridge::Exception& e){
+                    ROS_ERROR("cv_bridge exception: %s", e.what());
+                    return;
+            }
+
+            // tf listener
+            try{
+                // fixme: is the source odom or map??? No, then it will be no transform, namely, every quat is w=1 and no translation...
+                // lookupTransform (const std::string &target_frame, const std::string &source_frame, const ros::Time &time, const ros::Duration timeout=ros::Duration(0.0)) const
+                latestPoseFromOdom = tfBuffer.lookupTransform("odom", "base_footprint", ros::Time(0));
+                std::cout<<"Pose from Odom listener passed."<<std::endl;
+                latestPoseFromEKF = tfBuffer.lookupTransform("map", "odom", ros::Time(0));
+                std::cout<<"Pose from EKF listener passed."<<std::endl;
+            }
+            catch (tf2::TransformException &ex) {
+                ROS_WARN("%s", ex.what());
+                ros::Duration(1.0).sleep();
+                // continue; // coz no while here
+            }
+            
+            std::string current_time_stamp = std::to_string((int)(ros::Time::now().toSec()));
+
+            ROS_ASSERT( cv::imwrite( std::string(SAVE_PATH) + std::string( "image_at_" ) + current_time_stamp + std::string( ".png" ), cv_ptr->image ) );
+
+            //imwrite("/home/Documents/image_with_pose.jpg", cv_ptr->image);
+            std::cout<<"Image saved at "<<current_time_stamp<<std::endl;
+
+            SpinApp::saveCurrentPose(current_time_stamp);
+            store_image = false;
+        }
+        else
+        {
+            ROS_INFO("STORE IMAGE is false, the imageCb not activated");
+        }
+    }
+
     // the msgs md5sum security parity pairs are hard to deal with, thus we borrow the request and response msgs from TakePanorama here
     bool SpinApp::doRobotSpinServiceCb(turtlebot3_applications_msgs::TakePanorama::Request& request, turtlebot3_applications_msgs::TakePanorama::Response& response)
     {
-        if (is_active && (request.mode == request.STOP))
+        if (is_active && (request.mode == request.SNAPANDROTATE))
+        {
+            log("Panorama creation already in progress.");
+            response.status = request.IN_PROGRESS;
+        }
+        else if (is_active && (request.mode == request.STOP))
         {
             is_active = false;
             log("Robot spin stopped");
@@ -284,7 +318,6 @@ namespace robot_spinning
                 snap_interval = request.snap_interval;
                 cmd_vel.angular.z = request.rot_vel;
             }
-
             log("Starting robot spin and data capturing, turning is_active as true");
             // startPanoAction();
             is_active = true;
@@ -343,57 +376,6 @@ namespace robot_spinning
 
         quat_odom_file.close();
         pose_file.close();
-    }
-
-    // here if you look at the src of imageTransport::Sub, usb_cam, you will find that they directly utilize:
-    // it.advertiseCamera("image_raw", 1); rather than using nh.advertise(). With the publish(const sensor_msgs::ImageConstPtr& image, ...) of 
-    // it.advertiseCamera, the cb of any subs (imageCallback) here can take in ImageConstPtr& image type param without requiring like nh.advertise<> setting up the msg datatype
-    void SpinApp::imageCallback(const sensor_msgs::ImageConstPtr& msg) // these msg are setup to receive msg from the topic which is encoded by the publisher 
-    {
-        if (store_image)
-        {
-            ROS_INFO("Image callback received");
-
-            // **** First Convert the Sensor Msg Image to OpenCV format
-
-            cv_bridge::CvImagePtr cv_ptr;
-            try{
-                    cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-            }
-            catch (cv_bridge::Exception& e){
-                    ROS_ERROR("cv_bridge exception: %s", e.what());
-                    return;
-            }
-
-            // tf listener
-            try{
-                // fixme: is the source odom or map??? No, then it will be no transform, namely, every quat is w=1 and no translation...
-                // lookupTransform (const std::string &target_frame, const std::string &source_frame, const ros::Time &time, const ros::Duration timeout=ros::Duration(0.0)) const
-                latestPoseFromOdom = tfBuffer.lookupTransform("odom", "base_footprint", ros::Time(0));
-                std::cout<<"Pose from Odom listener passed."<<std::endl;
-                latestPoseFromEKF = tfBuffer.lookupTransform("map", "odom", ros::Time(0));
-                std::cout<<"Pose from EKF listener passed."<<std::endl;
-            }
-            catch (tf2::TransformException &ex) {
-                ROS_WARN("%s", ex.what());
-                ros::Duration(1.0).sleep();
-                // continue; // coz no while here
-            }
-            
-            std::string current_time_stamp = std::to_string((int)(ros::Time::now().toSec()));
-
-            ROS_ASSERT( cv::imwrite( std::string(SAVE_PATH) + std::string( "image_at_" ) + current_time_stamp + std::string( ".png" ), cv_ptr->image ) );
-
-            //imwrite("/home/Documents/image_with_pose.jpg", cv_ptr->image);
-            std::cout<<"Image saved at "<<current_time_stamp<<std::endl;
-
-            SpinApp::saveCurrentPose(current_time_stamp);
-            store_image = false;
-        }
-        else
-        {
-            ROS_INFO("STORE IMAGE is false, the imageCallback not activated");
-        }
     }
 
     //*************

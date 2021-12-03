@@ -19,17 +19,17 @@
 #include <sensor_msgs/Image.h>		
 #include <geometry_msgs/Twist.h>
 #include <nav_msgs/Odometry.h>		
-// #include <image_transport/image_transport.h>	
+#include <image_transport/image_transport.h>	
 #include <turtlebot3_applications_msgs/TakePanorama.h>
 
-#include <cmath>
+// #include <cmath>
 
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 
 #include <tf2_ros/transform_listener.h>
 #include <geometry_msgs/TransformStamped.h>
-#include <std_msgs/Bool.h>
+// #include <std_msgs/Bool.h>
 
 namespace robot_spinning
 {
@@ -78,8 +78,7 @@ namespace robot_spinning
             void init();
             void spin();
             // void trans(); // the translation function 
-            void itAndListenerInit();
-
+            
             /**
             * Additionally sends out logging information on a ROS topic
             * @param msg logging information
@@ -87,6 +86,7 @@ namespace robot_spinning
             void log(std::string msg);
 
         private:
+            ros::NodeHandle nh;
             ros::NodeHandle priv_nh;
             std::map<std::string, std::string> params;
 
@@ -97,7 +97,7 @@ namespace robot_spinning
             // these are placeholders for the translation part
             // double trans, last_angle, given_angle, ang_vel_cur;
             
-            image_transport::Publisher pub_image_with_pose;
+            // image_transport::Publisher pub_image_with_pose;
             image_transport::Subscriber sub_camera;
 
             ros::ServiceServer srv_start_spin;
@@ -105,19 +105,15 @@ namespace robot_spinning
             // for publishing robot motion
             ros::Publisher pub_cmd_vel;
 
-            // info publisher to image_with_pose node
-            ros::Publisher pub_to_image_with_pose;
-
             // for retrieving the odometry of robot
             ros::Subscriber sub_odom;
 
-            std::vector<cv::Mat> images_;
+            // std::vector<cv::Mat> images_;
 
             /**
             * turns true, when the spin_ros action goal goes active
             */
             bool is_active;
-            std_msgs::Bool data_cap_en_msg;
 
             /**
             * Tells the spin_ros feedback callback to set is_active to true (starts rotating the robot)
@@ -159,7 +155,6 @@ namespace robot_spinning
 
             // for robot_spinning_cap_data node, used in imageCallback
             void saveCurrentPose(std::string& current_time_stamp);
-            ros::NodeHandle nh;
             tf2_ros::Buffer tfBuffer;
             void imageCb(const sensor_msgs::ImageConstPtr& msg);
     };

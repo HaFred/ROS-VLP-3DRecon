@@ -66,9 +66,9 @@ namespace turtlebot_panorama
     // because of the priv_nh, when calling this srv, need the prefix in the name. And this service deal with parameters from the rosservice call cmd
     srv_start_pano = priv_nh.advertiseService("take_pano", &PanoApp::takePanoServiceCb, this);
 
-    // priv nh makes the panorama image topic unavailable for the external frame viewer
-    image_transport::ImageTransport it_priv(priv_nh);
-    pub_stitched = it_priv.advertise("panorama", 1, true);
+    // // priv nh makes the panorama image topic unavailable for the external frame viewer
+    // image_transport::ImageTransport it_priv(priv_nh);
+    // pub_stitched = it_priv.advertise("panorama", 1, true);
 
     image_transport::ImageTransport it(nh);
     sub_camera = it.subscribe("usb_cam/image_raw", 1, &PanoApp::cameraImageCb, this);
@@ -299,7 +299,7 @@ namespace turtlebot_panorama
 
   void PanoApp::cameraImageCb(const sensor_msgs::ImageConstPtr& msg)
   {
-    ROS_INFO("camera image cb is activated");
+    ROS_INFO("camera image cb is activated ********");
     if (store_image)
     {
       std::cout << "encoding: " << msg->encoding << std::endl;
@@ -317,7 +317,7 @@ namespace turtlebot_panorama
         return;
       }
 
-      images_.push_back(cv_ptr->image);
+      images_.push_back(cv_ptr->image); // private image buffer for all the snapshots
       store_image = false;
     }
     else 
