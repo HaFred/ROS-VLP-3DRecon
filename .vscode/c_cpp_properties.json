@@ -1,0 +1,27 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "",
+        "limitSymbolsToIncludedHeaders": true
+      },
+      "includePath": [
+        "/home/liphy/catkin_ws/devel/include/**",
+        "/opt/ros/melodic/include/**",
+        "/home/liphy/catkin_ws/src/image_with_pose/include/**",
+        "/home/liphy/catkin_ws/src/imu_tools/include/**",
+        "/home/liphy/catkin_ws/src/learning_tf2_fred/include/**",
+        "/home/liphy/catkin_ws/src/liphy_vlp/include/**",
+        "/home/liphy/catkin_ws/src/mvcam/include/**",
+        "/home/liphy/catkin_ws/src/robot_spinning_cap_data/include/**",
+        "/home/liphy/catkin_ws/src/turtlebot3/turtlebot3_panorama/include/**",
+        "/home/liphy/catkin_ws/src/turtlebot3/turtlebot3_slam/include/**",
+        "/home/liphy/catkin_ws/src/usb_cam-develop/include/**",
+        "/home/liphy/catkin_ws/src/vlc_positioning/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS"
+    }
+  ],
+  "version": 4
+}

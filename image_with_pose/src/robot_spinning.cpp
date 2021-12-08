@@ -16,7 +16,7 @@
 #include <cv_bridge/cv_bridge.h>
 
 // to be deleted
-//  #include <turtlebot3_panorama/panorama.h>
+#include <turtlebot3_panorama/panorama.h>
 
 #include <image_with_pose/robot_spinning.h>
 

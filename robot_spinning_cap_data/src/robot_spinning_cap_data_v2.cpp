@@ -1,7 +1,7 @@
  /**
  * @file 
  *
- * @brief This node merge image_with_pose and robot_spinning into one single node, to avoid the closed loop of image_with_pose_v4.
+ * @brief 2.0 tries to embed the fin signal and publish to robot_trans node. Meanwhile the srv not stopped, still listening for the trans_fin singal from robot_trans node.
  *
  * @date Nov 24, 2021
  *
@@ -40,7 +40,7 @@
 #include <robot_spinning_cap_data/robot_spinning.h>
 
 #define FIXED_Z_VALUE 0.4
-#define VERSION "1.0"
+#define VERSION "2.0"
 
 #define SAVE_PATH "/home/liphy/catkin_ws/src/robot_spinning_cap_data/cap_data/"
 

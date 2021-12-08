@@ -1,0 +1,43 @@
+# 1 "/home/liphy/catkin_ws/src/.vscode/launch.json"
+# 1 "/home/liphy/catkin_ws/src/.vscode//"
+# 1 "<built-in>"
+# 1 "<command-line>"
+# 31 "<command-line>"
+# 1 "/usr/include/stdc-predef.h" 1 3 4
+# 32 "<command-line>" 2
+# 1 "/home/liphy/catkin_ws/src/.vscode/launch.json"
+{
+
+
+
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "ROS: Launch",
+            "type": "ros",
+            "request": "launch",
+            "target": "/home/liphy/catkin_ws/src/robot_spinning_cap_data/launch/robot_spinning_cap_data.launch"
+        },
+        {
+            "name": "cpp - Build and debug active file",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${fileDirname}/${fileBasenameNoExtension}",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "C/C++: cpp build active file",
+            "miDebuggerPath": "/usr/bin/gdb"
+        }
+    ]
+}
