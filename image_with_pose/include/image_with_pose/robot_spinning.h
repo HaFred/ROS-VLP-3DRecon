@@ -94,9 +94,6 @@ namespace robot_spinning
             double snap_interval;
             double curr_angle, last_angle, given_target_angle, ang_vel_cur;
             
-            // these are placeholders for the translation part
-            // double trans, last_angle, given_angle, ang_vel_cur;
-            
             image_transport::Publisher pub_image_with_pose;
             image_transport::Subscriber sub_camera;
 
@@ -117,6 +114,7 @@ namespace robot_spinning
             * turns true, when the spin_ros action goal goes active
             */
             bool is_active;
+            bool continuous;
             std_msgs::Bool data_cap_en_msg;
 
             /**

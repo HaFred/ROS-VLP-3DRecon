@@ -37,7 +37,7 @@
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Geometry>
 #include <cv_bridge/cv_bridge.h>
-#include <robot_spinning_cap_data/robot_spinning.h>
+#include <robot_spinning_cap_data/robot_spinning_cap_data.h>
 
 #define FIXED_Z_VALUE 0.4
 #define VERSION "1.0"

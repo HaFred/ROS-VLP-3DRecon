@@ -143,22 +143,34 @@ int main(int argc, char** argv)
     tf2_ros::Buffer tfBuffer;
     tf2_ros::TransformListener tfListener(tfBuffer);
 
-    // tf2_ros::Buffer tfBufferEKF;
-    // tf2_ros::TransformListener tfListenerEKF(tfBufferEKF);
-    // ros::Rate rate(10.0);
-
     image_transport::ImageTransport it(nh);
     image_transport::Subscriber sub = it.subscribe("usb_cam/image_raw", 1, imageCallback); // the size of the publisher queue is set to 1
 
-    // multi-threaded spinnning
+    // moving it out of nh.ok is not ok, the odom cannot be passed to lookuptransform as target_frame
+    // try{
+    //         // fixme: is the source odom or map??? No, then it will be no transform, namely, every quat is w=1 and no translation...
+    //         // lookupTransform (const std::string &target_frame, const std::string &source_frame, const ros::Time &time, const ros::Duration timeout=ros::Duration(0.0)) const
+    //         latestPoseFromOdom = tfBuffer.lookupTransform("odom", "base_footprint", ros::Time(0));
+    //         cout<<"Pose from Odom listener passed."<<endl;
+	// 		latestPoseFromEKF = tfBuffer.lookupTransform("map", "odom", ros::Time(0));
+    //         cout<<"Pose from EKF listener passed."<<endl;
+
+    //         // hardcoded the pose_is_updated as true for now
+    //         cout<<"Pose updated: "<<pose_is_updated<<endl;
+    //     }
+    //     catch (tf2::TransformException &ex) {
+    //         ROS_WARN("%s", ex.what());
+    //         ros::Duration(1.0).sleep();
+    //         // continue;
+    //     }
+
+    // used to try multi-threaded spinnning, but hard to implement and maintain multiple thread queues...
+    // iwp node just use interrupt, make sue the pose is correct. For actual implementation, we use robot_spin_data_cap node
     while (nh.ok()){
-        // thread 1, spin for the enable signal
 
-        // ROS_INFO("Press a key to capture image");
-        // int c = std::cin.get();
+        ROS_INFO("Press a key to capture image");
+        int c = std::cin.get();
 
-        // thread 2, spin for the tflistener
-        // tf2_listener adpatation
         try{
             // fixme: is the source odom or map??? No, then it will be no transform, namely, every quat is w=1 and no translation...
             // lookupTransform (const std::string &target_frame, const std::string &source_frame, const ros::Time &time, const ros::Duration timeout=ros::Duration(0.0)) const
@@ -175,6 +187,7 @@ int main(int argc, char** argv)
             ros::Duration(1.0).sleep();
             continue;
         }
+
         ros::spinOnce(); // single threaded spinning, allowing all the callbacks work, only for subscription. However, we have the it subscriber here, so it has to be activated.
     }
     return 0;

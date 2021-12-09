@@ -84,6 +84,7 @@ namespace robot_spinning
             * @param msg logging information
             */
             void log(std::string msg);
+            tf2_ros::Buffer tfBuffer;
 
         private:
             ros::NodeHandle nh;
@@ -114,6 +115,9 @@ namespace robot_spinning
             * turns true, when the spin_ros action goal goes active
             */
             bool is_active;
+
+            /* turns true, when first spinning finished */
+            bool first_spin_done;
 
             /**
             * Tells the spin_ros feedback callback to set is_active to true (starts rotating the robot)
@@ -155,7 +159,6 @@ namespace robot_spinning
 
             // for robot_spinning_cap_data node, used in imageCallback
             void saveCurrentPose(std::string& current_time_stamp);
-            tf2_ros::Buffer tfBuffer;
             void imageCb(const sensor_msgs::ImageConstPtr& msg);
     };
 } // namespace robot_spinning

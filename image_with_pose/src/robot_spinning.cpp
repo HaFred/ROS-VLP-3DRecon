@@ -59,7 +59,7 @@ namespace robot_spinning
         zero_cmd_vel = cmd_vel;
         data_cap_en_msg.data = false;
         is_active = false;
-        continuous = false;
+        // continuous = false;
         ang_vel_cur = 0.0;
         given_target_angle = 0.0;
         curr_angle = 0.0;

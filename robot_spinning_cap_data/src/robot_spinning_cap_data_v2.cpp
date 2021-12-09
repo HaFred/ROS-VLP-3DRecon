@@ -8,7 +8,7 @@
  * @author HaFred
  **/
 
-// image with pose
+// from image with pose
 #include <ros/ros.h>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -31,13 +31,13 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <std_msgs/Bool.h>
 
-// robot spinning
+// from robot spinning
 #include <cmath>
 #include <iostream>
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Geometry>
 #include <cv_bridge/cv_bridge.h>
-#include <robot_spinning_cap_data/robot_spinning.h>
+#include <robot_spinning_cap_data/robot_spinning_cap_data.h>
 
 #define FIXED_Z_VALUE 0.4
 #define VERSION "2.0"
@@ -66,9 +66,6 @@ namespace robot_spinning
         // because of the priv_nh, when calling this srv, need the prefix in the name. And this service deal with parameters from the rosservice call cmd
         srv_start_spin = priv_nh.advertiseService("spin_srv", &SpinApp::doRobotSpinServiceCb, this); // object to call srv_func on
 
-        // the callback for listener and it_cb is in snap()
-        // tf2_listener adpatation, using the listener to subscribe tf
-        tf2_ros::TransformListener tfListener(tfBuffer);
         image_transport::ImageTransport it(nh);
 
         // once include header and class, do not put the declaration and definition together as in iwp_v2... It may cause the sub not working
@@ -88,6 +85,7 @@ namespace robot_spinning
         cmd_vel.angular.z = 0.0f;
         zero_cmd_vel = cmd_vel;
         is_active = false;
+        first_spin_done = false;
         ang_vel_cur = 0.0;
         given_target_angle = 0.0;
         curr_angle = 0.0;
@@ -118,6 +116,7 @@ namespace robot_spinning
                     curr_angle=0.0;
                     last_angle=0.0;
                     is_active = false;
+                    first_spin_done = true;
                 }
                 else
                 { // not finished yet
@@ -153,6 +152,11 @@ namespace robot_spinning
             else
             {
                 // ROS_INFO("In the spin(), but is_active false");
+            }
+
+            if (first_spin_done) {
+                // publish a topic to robot_trans node
+
             }
             // if not active, still needs to activate the callback to make the process flowing by single-threaded spin
             ros::spinOnce();
@@ -225,14 +229,12 @@ namespace robot_spinning
         ang_vel_cur = msg->twist.twist.angular.z;
     }
 
-    // here if you look at the src of imageTransport::Sub, usb_cam, you will find that they directly utilize: it.advertiseCamera("image_raw", 1); rather than using nh.advertise(). With the publish(const sensor_msgs::ImageConstPtr& image, ...) of it.advertiseCamera, the cb of any subs (imageCb) here can take in ImageConstPtr& image type param without requiring like nh.advertise<> setting up the msg datatype
+    // here if you look at the src of ima.eTransport::Sub, usb_cam, you will find that they directly utilize: it.advertiseCamera("image_raw", 1); rather than using nh.advertise(). With the publish(const sensor_msgs::ImageConstPtr& image, ...) of it.advertiseCamera, the cb of any subs (imageCb) here can take in ImageConstPtr& image type param without requiring like nh.advertise<> setting up the msg datatype
     void SpinApp::imageCb(const sensor_msgs::ImageConstPtr& msg) // these msg are setup to receive msg from the topic which is encoded by the publisher 
     {
-        ROS_INFO("camera image cb is activated ********");
+        // ROS_INFO("DEBUG: camera image cb is activated ********");
         if (store_image)
         {
-            ROS_INFO("STORE IMAGE true, Image callback received ++++++++");
-
             // **** First Convert the Sensor Msg Image to OpenCV format
 
             cv_bridge::CvImagePtr cv_ptr;
@@ -242,21 +244,6 @@ namespace robot_spinning
             catch (cv_bridge::Exception& e){
                     ROS_ERROR("cv_bridge exception: %s", e.what());
                     return;
-            }
-
-            // tf listener
-            try{
-                // fixme: is the source odom or map??? No, then it will be no transform, namely, every quat is w=1 and no translation...
-                // lookupTransform (const std::string &target_frame, const std::string &source_frame, const ros::Time &time, const ros::Duration timeout=ros::Duration(0.0)) const
-                latestPoseFromOdom = tfBuffer.lookupTransform("odom", "base_footprint", ros::Time(0));
-                std::cout<<"Pose from Odom listener passed."<<std::endl;
-                latestPoseFromEKF = tfBuffer.lookupTransform("map", "odom", ros::Time(0));
-                std::cout<<"Pose from EKF listener passed."<<std::endl;
-            }
-            catch (tf2::TransformException &ex) {
-                ROS_WARN("%s", ex.what());
-                ros::Duration(1.0).sleep();
-                // continue; // coz no while here
             }
             
             std::string current_time_stamp = std::to_string((int)(ros::Time::now().toSec()));
@@ -268,10 +255,11 @@ namespace robot_spinning
 
             SpinApp::saveCurrentPose(current_time_stamp);
             store_image = false; // in the callback, everytime the data cap, reset store flag
+            ROS_INFO("DEBUG: Image cb received and data saved++++++++");
         }
         else
         {
-            ROS_INFO("STORE IMAGE is false, the imageCb not received --------");
+            // ROS_INFO("DEBUG: STORE IMAGE is false, the imageCb not received --------");
         }
     }
 
@@ -397,13 +385,35 @@ namespace robot_spinning
     std::cout<<"Robot spin with cap data node is started. Version: "<<VERSION<<std::endl;
     ros::init(argc, argv, "robot_spinning_cap_data");
     robot_spinning::SpinApp spin;
-    spin.log("Robot rotating for data capturing starting...");
-    spin.init();
-    spin.log("Rotating initialized");
-    spin.spin();
-    spin.log("Rotating spin done");
-    // spin.trans();
-    // spin.log("Rotating translation done, end");
 
+    // the callback for listener and it_cb is in snap()
+    // tf2_listener adpatation, using the listener to subscribe tf
+    tf2_ros::TransformListener tfListener(spin.tfBuffer);
+    
+    /***************************** 
+     global var for tfbuffer lookupTransform
+    **/
+    while (ros::ok()){
+        // tf listener, for src/target frame, refer to iwp_3.4
+        // try-catch clause is for lookupTransform, because it cannot be put inside the cb fn (refer to my ros answers upvote). Making it class member var and put outside, it works
+        try{
+            // lookupTransform (const std::string &target_frame, const std::string &source_frame, const ros::Time &time, const ros::Duration timeout=ros::Duration(0.0)) const
+            latestPoseFromOdom = spin.tfBuffer.lookupTransform("odom", "base_footprint", ros::Time(0));
+            std::cout<<"Pose from Odom listener passed."<<std::endl;
+            latestPoseFromEKF = spin.tfBuffer.lookupTransform("map", "odom", ros::Time(0));
+            std::cout<<"Pose from EKF listener passed."<<std::endl;
+
+            spin.log("Robot rotating for data capturing starting...");
+            spin.init();
+            spin.log("Rotating initialized");
+            spin.spin();
+            spin.log("Rotating spin done");
+        }
+        catch (tf2::TransformException &ex) {
+            ROS_WARN("%s", ex.what());
+            ros::Duration(1.0).sleep();
+            continue; // coz no while here
+        }
+    }
     return 0;
 }
