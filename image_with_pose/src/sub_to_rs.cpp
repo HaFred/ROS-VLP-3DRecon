@@ -1,7 +1,7 @@
 /**
  * @file sub_to_rs.cpp
  *
- * @brief Just a simple sub to rs
+ * @brief Just a simple sub to robot_spinning
  *
  * @date Dec 2, 2021
  *

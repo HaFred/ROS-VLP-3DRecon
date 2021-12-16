@@ -1,6 +1,15 @@
 <launch>
   <!-- Camera Image Transport to raw, needs to include this node here otherwise imageCb cant be activated in rpcd node --> I
   <node pkg="image_transport" type="republish" name="republish" output="screen" args="compressed in:=/usb_cam/image_raw raw out:=/usb_cam/image_raw" />
+  
+  <!-- to acitvate the urdf description file, but not the entire rviz, to save the comp overhead -->
+  <!-- <arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
+  <include file="$(find turtlebot3_bringup)/launch/includes/description.launch.xml">
+    <arg name="model" value="$(arg model)" />
+  </include> -->
+
+  <!-- not sure whether the robot_state_publisher node is required -->
+
   <!-- NOTE that the type here needs to be changed as robot_spinning, rather than image_with_pose, otherwise this launch file will be directed to image_with_pose.cpp-->
   <node pkg="robot_spinning_cap_data" type="robot_spinning_cap_data" name="robot_spinning_cap_data" respawn="false" output="screen">
     <param name="default_mode" value="0"/>

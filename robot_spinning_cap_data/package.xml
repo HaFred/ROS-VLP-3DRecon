@@ -52,6 +52,7 @@
   <build_depend>opencv</build_depend>
   <depend>roscpp</depend>
   <depend>rospy</depend>
+  <depend>rosbag</depend>
   <depend>std_msgs</depend>
   <depend>std_srvs</depend>
   <depend>sensor_msgs</depend>

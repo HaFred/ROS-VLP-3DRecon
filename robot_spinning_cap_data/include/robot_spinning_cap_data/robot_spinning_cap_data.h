@@ -12,6 +12,7 @@
 #define SPINNING_H_
 
 #include <ros/ros.h>
+#include <rosbag/bag.h>
 #include <std_msgs/Empty.h> 		
 #include <std_msgs/String.h>
 #include <std_msgs/Bool.h>
@@ -86,12 +87,19 @@ namespace robot_spinning
             void log(std::string msg);
             tf2_ros::Buffer tfBuffer;
 
+
         private:
             ros::NodeHandle nh;
             ros::NodeHandle priv_nh;
             std::map<std::string, std::string> params;
 
             geometry_msgs::Twist cmd_vel, zero_cmd_vel;
+            std_msgs::Bool trans_enable_sign, trans_not_yet_enabled_sign;
+
+            uint snap_cnt;
+
+            // parameter from the srv
+            float request_rot_vel;
             double snap_interval;
             double curr_angle, last_angle, given_target_angle, ang_vel_cur;
             
@@ -106,8 +114,18 @@ namespace robot_spinning
             // for publishing robot motion
             ros::Publisher pub_cmd_vel;
 
+            // for publishing sign to rbt_trans
+            ros::Publisher pub_to_rbt_trans;
+
             // for retrieving the odometry of robot
             ros::Subscriber sub_odom;
+
+            // 2nd rotate
+            ros::Subscriber sub_speed_ctrller;
+
+            rosbag::Bag pose_bag;
+
+            // std::string start_time;
 
             // std::vector<cv::Mat> images_;
 
@@ -115,9 +133,12 @@ namespace robot_spinning
             * turns true, when the spin_ros action goal goes active
             */
             bool is_active;
+            bool translation_done;
 
             /* turns true, when first spinning finished */
             bool first_spin_done;
+
+            // bool second_spin_done;
 
             /**
             * Tells the spin_ros feedback callback to set is_active to true (starts rotating the robot)
@@ -129,14 +150,6 @@ namespace robot_spinning
             * Default spinning mode used for interaction via rostopic
             */
             int default_mode;
-            /**
-            * Default spinning angle used for interaction via rostopic
-            */
-            double default_spin_angle;
-            double default_trans_speed;
-
-            double default_snap_interval;
-            double default_rotation_velocity;
 
             bool store_image;
 
@@ -156,8 +169,9 @@ namespace robot_spinning
             void odomCb(const nav_msgs::OdometryConstPtr& msg);
             void startSpinAction();
             void cameraImageCb(const sensor_msgs::ImageConstPtr& msg);
+            void secondRotateCb(const std_msgs::BoolConstPtr& msg);
 
-            // for robot_spinning_cap_data node, used in imageCallback
+            // migrated from imageCallback for robot_spinning_cap_data node
             void saveCurrentPose(std::string& current_time_stamp);
             void imageCb(const sensor_msgs::ImageConstPtr& msg);
     };
