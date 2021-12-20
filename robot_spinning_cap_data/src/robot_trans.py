@@ -88,7 +88,7 @@ def main():
 
         if (assigned_dist - curr_translation > 0.1):
             if local_trans_enable:
-                speed.linear.x = 0.05
+                speed.linear.x = 0.03
                 speed.angular.z = 0.0
                 # flag_2nd_rotate.data = False
             else:

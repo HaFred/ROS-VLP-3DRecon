@@ -2,6 +2,8 @@
  * @file 
  *
  * @brief This node merge image_with_pose and robot_spinning into one single node, to avoid the closed loop of image_with_pose_v4.
+ * 
+ *         NOTE THAT this version pose is nan, not working
  *
  * @date Nov 24, 2021
  *

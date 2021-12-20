@@ -1,0 +1,2 @@
+%time,field.header.seq,field.header.stamp,field.header.frame_id,field.child_frame_id,field.transform.translation.x,field.transform.translation.y,field.transform.translation.z,field.transform.rotation.x,field.transform.rotation.y,field.transform.rotation.z,field.transform.rotation.w
+1639735151573905211,0,0,,,5.60333049315,7.09828636121,0.4,0.0,0.0,-0.000969491731061,0.999999530043
