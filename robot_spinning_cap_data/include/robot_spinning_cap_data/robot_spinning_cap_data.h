@@ -125,8 +125,6 @@ namespace robot_spinning
 
             rosbag::Bag pose_bag;
 
-            // std::string start_time;
-
             // std::vector<cv::Mat> images_;
 
             /**

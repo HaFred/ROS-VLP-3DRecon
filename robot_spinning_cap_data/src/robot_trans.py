@@ -86,7 +86,7 @@ def main():
         rospy.loginfo("delta is : %f" % delta)
         rospy.loginfo("curr_trans is: %f" % curr_translation)
 
-        if (assigned_dist - curr_translation > 0.1):
+        if (assigned_dist - curr_translation > 0.05):
             if local_trans_enable:
                 speed.linear.x = 0.03
                 speed.angular.z = 0.0

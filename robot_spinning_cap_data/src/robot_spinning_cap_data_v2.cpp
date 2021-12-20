@@ -2,8 +2,10 @@
  * @file 
  *
  * @brief 2.0 tries to embed the fin signal and publish to robot_trans node. Meanwhile the srv not stopped, still listening for the trans_fin singal from robot_trans node.
- *        2. For the data cap, no longer using ofstream, instead we try rosbag.
+ *        2. For the data cap, no longer using ofstream, instead we try rosbag (done at v2.1).
  *        3. Replace all the tf with tf2
+ * 
+ *        2.0 is a minimum workable template for image cap and data pose saving.
  *
  * @date Dec 15, 2021
  *
@@ -24,12 +26,11 @@
 #include "geometry_msgs/PoseWithCovarianceStamped.h"
 #include <fstream>
 #include <geometry_msgs/Pose2D.h>
-#include <tf/tf.h>  // dec18 test finds out tf2 cannot updates each pose saved?
 #include <nav_msgs/Odometry.h>
 #include <typeinfo>
 #include "yaml-cpp/yaml.h"
 
-// #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_ros/transform_listener.h>
 // #include <tf2/LinearMath/Quaternion.h>
 // #include <tf2/LinearMath/Transform.h>
@@ -398,14 +399,14 @@ namespace robot_spinning
         ROS_INFO("Overall saving pose");
         
         // saving the rotation matrix in the transform matrix
-        tf::Quaternion q(
+        tf2::Quaternion q(
             latestPoseFromOdom.transform.rotation.x,
             latestPoseFromOdom.transform.rotation.y,
             latestPoseFromOdom.transform.rotation.z,
             latestPoseFromOdom.transform.rotation.w
         );
         // q.normalize();
-        tf::Matrix3x3 rotate(q);
+        tf2::Matrix3x3 rotate(q);
         // geometry_msgs::Quaternion msg_quat;
         // msg_quat = tf2::toMsg(q);
         // tf2::Vector3 translation(latestPoseFromEKF.transform.translation.x,

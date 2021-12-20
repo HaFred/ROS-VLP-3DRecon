@@ -4,7 +4,7 @@ import bagpy
 from bagpy import bagreader
 import pandas as pd
 
-b = bagreader('/home/liphy/.ros/pose1.bag')
+b = bagreader('/home/liphy/catkin_ws/src/robot_spinning_cap_data/cap_data/pose_1639991824.203978.bag')
 
 # replace the topic name as per your need
 quat = b.message_by_topic('/bag_quat')

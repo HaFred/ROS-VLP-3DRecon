@@ -1,11 +1,11 @@
  /**
  * @file 
  *
- * @brief 1.9  did not include bag and complex motion and its pose saved is incorrect and not updated for every snap.
+ * @brief 2.1 tries to embed the fin signal and publish to robot_trans node. Meanwhile the srv not stopped, still listening for the trans_fin singal from robot_trans node.
+ *        2. For the data cap, no longer using ofstream, instead we try rosbag (done at v2.1).
+ *        3. Replace all the tf with tf2
  * 
- *      It seems like the pose cannot be updated, it stuck at the init pose.
- *
- * @date Nov 24, 2021
+ * @date Dec 20, 2021
  *
  * @author HaFred
  **/
@@ -24,14 +24,20 @@
 #include "geometry_msgs/PoseWithCovarianceStamped.h"
 #include <fstream>
 #include <geometry_msgs/Pose2D.h>
-#include <tf/tf.h>  // not sure will it be conflicted with tf2?
 #include <nav_msgs/Odometry.h>
 #include <typeinfo>
 #include "yaml-cpp/yaml.h"
 
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_ros/transform_listener.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Transform.h>
+#include <tf2/LinearMath/Matrix3x3.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <std_msgs/Bool.h>
+
+// for rosbag
+#include <rosbag/bag.h>
 
 // from robot spinning
 #include <cmath>
@@ -42,7 +48,7 @@
 #include <robot_spinning_cap_data/robot_spinning_cap_data.h>
 
 #define FIXED_Z_VALUE 0.4
-#define VERSION "1.9"
+#define VERSION "2.1"
 
 #define SAVE_PATH "/home/liphy/catkin_ws/src/robot_spinning_cap_data/cap_data/"
 
@@ -66,18 +72,21 @@ namespace robot_spinning
     { // direct class access scope resolution operator
 
         // because of the priv_nh, when calling this srv, need the prefix in the name. And this service deal with parameters from the rosservice call cmd
-        srv_start_spin = priv_nh.advertiseService("spin_srv", &SpinApp::doRobotSpinServiceCb, this); // object to call srv_func on
+        srv_start_spin = priv_nh.advertiseService("spin_srv", &SpinApp::doRobotSpinServiceCb, this); // this: object to call srv_func on
 
         image_transport::ImageTransport it(nh);
 
         // once include header and class, do not put the declaration and definition together as in iwp_v2... It may cause the sub not working
         sub_camera = it.subscribe("usb_cam/image_raw", 1, &SpinApp::imageCb, this); // the size of the publisher queue is set to 1
         
-        /****************************
-         robot control
-        ****************************/
+        // robot control
         pub_cmd_vel = nh.advertise<geometry_msgs::Twist>("cmd_vel", 100); // queue 100, no latch
-        sub_odom = nh.subscribe("odom", 100, &SpinApp::odomCb, this); // callback function ptr is passed in as the 3rd arg 
+
+        pub_to_rbt_trans = nh.advertise<std_msgs::Bool>("enable_robot_trans", 100);
+
+        sub_odom = nh.subscribe("odom", 100, &SpinApp::odomCb, this); // callback function ptr is passed in as the 3rd arg, tracked object is this
+
+        sub_speed_ctrller = nh.subscribe("second_rotate", 100, &SpinApp::secondRotateCb, this);
 
         cmd_vel.linear.x = 0.0f;
         cmd_vel.linear.y = 0.0f;
@@ -86,18 +95,28 @@ namespace robot_spinning
         cmd_vel.angular.y = 0.0f;
         cmd_vel.angular.z = 0.0f;
         zero_cmd_vel = cmd_vel;
+        
+        // const msg for pub_to_rbt_trans publishment
+        trans_enable_sign.data = true;
+        trans_not_yet_enabled_sign.data = false;
+
         is_active = false;
         first_spin_done = false;
+        translation_done = false;
+        store_image = true;
         ang_vel_cur = 0.0;
         given_target_angle = 0.0;
         curr_angle = 0.0;
         last_angle = 0.0;
+        snap_cnt = 0;
+
+        // to make rosbag contiuously saving
+        pose_bag.open(std::string(SAVE_PATH) + "pose_" + std::to_string(ros::Time::now().toSec()) + ".bag", rosbag::bagmode::Write);
     }
 
     void SpinApp::spin()
     {
         ros::Rate loop_rate(10); // read rate at 10hz
-        double start_time = 0.0;
         bool take_snapshot = false;
 
         while(ros::ok())
@@ -111,17 +130,27 @@ namespace robot_spinning
                     snap();
                     // halt the robot for spinning 180 degree
                     pub_cmd_vel.publish(zero_cmd_vel);
-                    log("Finished Semicircle Data Cap");
-
-                    ROS_INFO("Angle: %f", curr_angle); 
-                    ROS_INFO("Last Angle: %f", last_angle); 
                     curr_angle=0.0;
                     last_angle=0.0;
                     is_active = false;
                     first_spin_done = true;
+                    log("Finished Semicircle Data Cap");
+
+                    // log("Finished Semicircle Data Cap"); 
+                    // ROS_INFO("translation_done: %s", translation_done ? "true":"false"); 
+                    // ros::shutdown();
+
+                    if (translation_done) // second spin is also done
+                    {
+                        ROS_INFO("DEBUG: ##################### second spin done...");
+                        // pose_bag.close();
+                        ros::shutdown();
+                        ROS_INFO("SHUTDOWN AND QUIT rscd node...");
+                    }
                 }
                 else
-                { // not finished yet
+                {   // not finished yet
+                    pub_to_rbt_trans.publish(trans_not_yet_enabled_sign);
                     if (hasReachedAngle())
                     {
                         pub_cmd_vel.publish(zero_cmd_vel); // stop before taking a snapshot when angle reached 
@@ -154,11 +183,15 @@ namespace robot_spinning
             else
             {
                 // ROS_INFO("In the spin(), but is_active false");
+                if(translation_done){
+                    ROS_INFO("DEBUG: ##################### translation done...");
+                    is_active = true;
+                }
             }
 
             if (first_spin_done) {
                 // publish a topic to robot_trans node
-
+                pub_to_rbt_trans.publish(trans_enable_sign);
             }
             // if not active, still needs to activate the callback to make the process flowing by single-threaded spin
             ros::spinOnce();
@@ -174,6 +207,8 @@ namespace robot_spinning
     void SpinApp::snap()
     {
         log("snap");
+        ++snap_cnt;
+        ROS_INFO("with the snap count: %d", snap_cnt);
         store_image = true;
         ros::spinOnce();
         ros::Duration(1.0).sleep();
@@ -199,6 +234,20 @@ namespace robot_spinning
             return false;
         }
 
+    }
+
+    void SpinApp::secondRotateCb(const std_msgs::BoolConstPtr& msg)
+    {
+        if (msg->data)
+        {
+            // ROS_INFO("DEBUG: second rotate activated");
+            cmd_vel.angular.z = -request_rot_vel;
+            translation_done = true;
+        }
+        else
+        {
+            // ROS_INFO("DEBUG: second rotate not activated")
+        }
     }
 
     void SpinApp::odomCb(const nav_msgs::OdometryConstPtr& msg)
@@ -237,6 +286,25 @@ namespace robot_spinning
         // ROS_INFO("DEBUG: camera image cb is activated ********");
         if (store_image)
         {
+            /* note that lookupTransform here must be updated (accessed) before every snap. Otherwise, the pose saved won't be updated (in dec20 1st commit, I put it in main() and cannot be accessed with the ok() in spin())...
+
+            Previously we make robot spin and data cap as separated node, robot_spinning & image_with_pose, that's why back then the poses are updated. Now we combine these two nodes into one, if we do not go through lookupTransform() every time, the dated-pose issue occurs.
+            
+            Since for spin(), we stuck in the ros::ok() and cannot get the updated lookupTransform() in main() outside spin(). We mannually access it here...*/
+            try{
+                // lookupTransform (const std::string &target_frame, const std::string &source_frame, const ros::Time &time, const ros::Duration timeout=ros::Duration(0.0)) const
+                latestPoseFromOdom = tfBuffer.lookupTransform("odom", "base_footprint", ros::Time(0));
+                std::cout<<"Pose from Odom listener passed."<<std::endl;
+                latestPoseFromEKF = tfBuffer.lookupTransform("map", "odom", ros::Time(0));
+                std::cout<<"Pose from EKF listener passed."<<std::endl;
+            }
+            catch (tf2::TransformException &ex) {
+                ROS_WARN("%s", ex.what());
+                ros::Duration(1.0).sleep();
+                return;
+                // continue; // coz no while here
+            }
+
             // **** First Convert the Sensor Msg Image to OpenCV format
 
             cv_bridge::CvImagePtr cv_ptr;
@@ -250,7 +318,7 @@ namespace robot_spinning
             
             std::string current_time_stamp = std::to_string((int)(ros::Time::now().toSec()));
 
-            ROS_ASSERT( cv::imwrite( std::string(SAVE_PATH) + std::string( "image_at_" ) + current_time_stamp + std::string( ".png" ), cv_ptr->image ) );
+            ROS_ASSERT( cv::imwrite( std::string(SAVE_PATH) + std::string( "image_" ) + current_time_stamp + std::string( ".png" ), cv_ptr->image ) );
 
             //imwrite("/home/Documents/image_with_pose.jpg", cv_ptr->image);
             std::cout<<"Image saved at "<<current_time_stamp<<std::endl;
@@ -310,9 +378,9 @@ namespace robot_spinning
                 given_target_angle = degrees_to_radians(request.pano_angle);
                 snap_interval = request.snap_interval;
                 cmd_vel.angular.z = request.rot_vel;
+                request_rot_vel = request.rot_vel;
             }
             log("Starting robot spin and data capturing, turning is_active as true");
-            // startPanoAction();
             is_active = true;
             response.status = request.STARTED; 
         }
@@ -324,51 +392,25 @@ namespace robot_spinning
         ROS_INFO("Overall saving pose");
         
         // saving the rotation matrix in the transform matrix
-        tf::Quaternion q(
+        tf2::Quaternion q(
             latestPoseFromOdom.transform.rotation.x,
             latestPoseFromOdom.transform.rotation.y,
             latestPoseFromOdom.transform.rotation.z,
             latestPoseFromOdom.transform.rotation.w
         );
-        tf::Matrix3x3 m(q);
-        
-        // initialize the pose matrix 
-        cv::Mat pose_matrix = cv::Mat::zeros(3, 4, CV_64F);
-        
-        pose_matrix.at<double>(1, 1) = m.getRow(1).getX();
-        pose_matrix.at<double>(1, 2) = m.getRow(1).getY();
-        pose_matrix.at<double>(1, 3) = m.getRow(1).getZ();
-        pose_matrix.at<double>(1, 4) = latestPoseFromEKF.transform.translation.x;
-        
-        pose_matrix.at<double>(2, 1) = m.getRow(2).getX();
-        pose_matrix.at<double>(2, 2) = m.getRow(2).getY();
-        pose_matrix.at<double>(2, 3) = m.getRow(2).getZ();
-        pose_matrix.at<double>(2, 4) = latestPoseFromEKF.transform.translation.y;
-        
-        pose_matrix.at<double>(3, 1) = m.getRow(3).getX();
-        pose_matrix.at<double>(3, 2) = m.getRow(3).getY();
-        pose_matrix.at<double>(3, 3) = m.getRow(3).getZ();
-        pose_matrix.at<double>(3, 4) = FIXED_Z_VALUE;
-        
-        // saving quat from odom
-        std::ofstream quat_odom_file(std::string(SAVE_PATH) + std::string("quat_from_odom_") + current_time_stamp + std::string(".txt"), std::ios::out | std::ios::binary);
-        for (int i = 0; i < 4; i++){
-            quat_odom_file << std::to_string(q[i]) + " ";
-        }
-        quat_odom_file << "\n";
-        quat_odom_file << std::to_string(latestPoseFromOdom.transform.translation.x) + " " << std::to_string(latestPoseFromOdom.transform.translation.y) + " ";
-        
-        // saving pose matrix
-        std::ofstream pose_file(std::string(SAVE_PATH) + std::string("pose_at_") + current_time_stamp + std::string(".txt"), std::ios::out | std::ios::binary);
-        for (int i = 1; i <= pose_matrix.rows; i++) {
-            for (int j = 1; j <= pose_matrix.cols; j++){
-                pose_file << std::to_string(pose_matrix.at<double>(i, j)) + " ";
-            }
-            pose_file << "\n";
-        }
+        q.normalize();
+        tf2::Matrix3x3 rotate(q);
+        geometry_msgs::Quaternion msg_quat;
+        msg_quat = tf2::toMsg(q);
+        tf2::Vector3 translation(latestPoseFromEKF.transform.translation.x,
+                            latestPoseFromEKF.transform.translation.y,
+                            FIXED_Z_VALUE);
+        tf2::Transform transform(rotate, translation);
+        geometry_msgs::TransformStamped msg_transform;
+        msg_transform.transform = tf2::toMsg(transform);
 
-        quat_odom_file.close();
-        pose_file.close();
+        pose_bag.write("bag_quat", ros::Time::now(), msg_quat);
+        pose_bag.write("bag_rotmat", ros::Time::now(), msg_transform);
     }
 
     //*************
@@ -391,30 +433,30 @@ namespace robot_spinning
     // the callback for listener and it_cb is in snap()
     // tf2_listener adpatation, using the listener to subscribe tf
     tf2_ros::TransformListener tfListener(spin.tfBuffer);
+
+    spin.init();
+    spin.log("Rotating initialized");
     
     /***************************** 
      global var for tfbuffer lookupTransform
     **/
     while (ros::ok()){
         // tf listener, for src/target frame, refer to iwp_3.4
-        // try-catch clause is for lookupTransform, because it cannot be put inside the cb fn (refer to my ros answers upvote). Making it class member var and put outside, it works
+        // try-catch clause is for lookupTransform to continue, because it cannot be put inside the cb fn (refer to my ros answers upvote). Making it class member var and put outside, it works
+        
         try{
-            // lookupTransform (const std::string &target_frame, const std::string &source_frame, const ros::Time &time, const ros::Duration timeout=ros::Duration(0.0)) const
             latestPoseFromOdom = spin.tfBuffer.lookupTransform("odom", "base_footprint", ros::Time(0));
             std::cout<<"Pose from Odom listener passed."<<std::endl;
             latestPoseFromEKF = spin.tfBuffer.lookupTransform("map", "odom", ros::Time(0));
             std::cout<<"Pose from EKF listener passed."<<std::endl;
-
             spin.log("Robot rotating for data capturing starting...");
-            spin.init();
-            spin.log("Rotating initialized");
             spin.spin();
             spin.log("Rotating spin done");
         }
         catch (tf2::TransformException &ex) {
             ROS_WARN("%s", ex.what());
             ros::Duration(1.0).sleep();
-            continue; // coz no while here
+            continue; // doing the rest other than exception, if no while just comment
         }
     }
     return 0;
