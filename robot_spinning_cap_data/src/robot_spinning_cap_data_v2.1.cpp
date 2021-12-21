@@ -77,7 +77,10 @@ namespace robot_spinning
         image_transport::ImageTransport it(nh);
 
         // once include header and class, do not put the declaration and definition together as in iwp_v2... It may cause the sub not working
-        sub_camera = it.subscribe("usb_cam/image_raw", 1, &SpinApp::imageCb, this); // the size of the publisher queue is set to 1
+        // before rect, it's usb_cam/image_raw
+        sub_camera = it.subscribe("usb_cam/image_rect_color", 1, &SpinApp::imageCb, this);
+        // sub_camera = it.subscribe("usb_cam/image_raw", 1, &SpinApp::imageCb, this);  
+        // the size of the publisher queue is set to 1
         
         // robot control
         pub_cmd_vel = nh.advertise<geometry_msgs::Twist>("cmd_vel", 100); // queue 100, no latch
