@@ -22,6 +22,7 @@
 #include <sstream>
 #include <boost/assign/list_of.hpp>
 #include "geometry_msgs/PoseWithCovarianceStamped.h"
+#include "geometry_msgs/Pose2D.h"
 #include <fstream>
 #include <geometry_msgs/Pose2D.h>
 #include <nav_msgs/Odometry.h>
@@ -56,6 +57,7 @@
 #define TROLLEY_HEIGHT 0.77
 #define MV_CAM_HEIGHT 0.165
 #define LIGHT_HEIGHT 2.7
+#define PI 3.14159265
 #define VERSION "2.1"
 
 #define SAVE_PATH "/home/liphy/catkin_ws/src/robot_spinning_cap_data/cap_data"
@@ -340,7 +342,7 @@ namespace robot_spinning
                 // lookupTransform (const std::string &target_frame, const std::string &source_frame, const ros::Time &time, const ros::Duration timeout=ros::Duration(0.0)) const
                 latestPoseFromOdom = tfBuffer.lookupTransform("odom", "base_footprint", ros::Time(0));
                 std::cout<<"Pose from Odom listener passed."<<std::endl;
-                latestPoseFromEKF = tfBuffer.lookupTransform("map", "odom", ros::Time(0));
+                latestPoseFromEKF = tfBuffer.lookupTransform("map", "base_link", ros::Time(0));
                 std::cout<<"Pose from EKF listener passed."<<std::endl;
             }
             catch (tf2::TransformException &ex) {
@@ -443,17 +445,26 @@ namespace robot_spinning
             latestPoseFromOdom.transform.rotation.z,
             latestPoseFromOdom.transform.rotation.w
         );
-        q.normalize();
+        // q.normalize();
         tf2::Matrix3x3 rotate(q);
+        double roll, pitch, yaw;
+        rotate.getRPY(roll, pitch, yaw);
+        geometry_msgs::Pose2D msg_pose2d;
+        msg_pose2d.theta = -1*(yaw * 180/PI + 180);
+        msg_pose2d.x = latestPoseFromEKF.transform.translation.x;
+        msg_pose2d.y = latestPoseFromEKF.transform.translation.y;
+
         geometry_msgs::Quaternion msg_quat;
         msg_quat = tf2::toMsg(q);
         tf2::Vector3 translation(latestPoseFromEKF.transform.translation.x,
                             latestPoseFromEKF.transform.translation.y,
                             TURTLE_Z_VALUE);
         tf2::Transform transform(rotate, translation);
+        
         geometry_msgs::TransformStamped msg_transform;
         msg_transform.transform = tf2::toMsg(transform);
 
+        pose_bag.write("bag_pose2d", ros::Time::now(), msg_pose2d);
         pose_bag.write("bag_quat", ros::Time::now(), msg_quat);
         pose_bag.write("bag_rotmat", ros::Time::now(), msg_transform);
     }

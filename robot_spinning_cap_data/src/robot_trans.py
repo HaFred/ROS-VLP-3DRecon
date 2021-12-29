@@ -80,7 +80,7 @@ def main():
 
     while not rospy.is_shutdown():
 
-        assigned_dist = 0.5  # there is odom dist shift, 1m here is around 1.5 in reality
+        assigned_dist = 0.4  # there is odom dist shift, 1m here is around 1.5 in reality. todo consider replacing the dist msg from odom into tf
 
         rospy.loginfo("\n************")
         rospy.loginfo("delta is : %f" % delta)

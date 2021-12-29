@@ -1,5 +1,7 @@
 /* v3.4 the final version of fusing positioning from tf_echo odom -> map (which is in /tf, back and forth processed by the loosely coupled EKF), and the rotation from odom itself (base_footprint -> odom).
         I hope that this one is the final version to progress into the cv part... At least make sure that the poses and intrinsics data are correct.
+
+        Dec29: remove the image received signal, now we just testing for the validation of the pose. If the usb_cam node crashes, let it be...
  */
 
 #include <ros/ros.h>
@@ -29,6 +31,7 @@ using namespace std;
 
 #define VERSION_NUMBER "3.4"  // programmed by fred
 #define FIXED_Z_VALUE 0.4
+#define PI 3.14159265
 
 #define SAVE_PATH "/home/liphy/catkin_ws/src/image_with_pose/captured_images/"
 
@@ -53,31 +56,30 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg) // these msg are setup
 
     // **** First Convert the Sensor Msg Image to OpenCV format
 
+    // if(pose_is_updated){
+    std::string current_time_stamp = std::to_string((int)(ros::Time::now().toSec()));
+
     cv_bridge::CvImagePtr cv_ptr;
     try{
-            cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-    }
-    catch (cv_bridge::Exception& e){
-            ROS_ERROR("cv_bridge exception: %s", e.what());
-            return;
-    }
-            
-    if(pose_is_updated){
-        std::string current_time_stamp = std::to_string((int)(ros::Time::now().toSec()));
-
+        cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
         ROS_ASSERT( cv::imwrite( std::string(SAVE_PATH) + std::string( "image_at_" ) + current_time_stamp + std::string( ".png" ), cv_ptr->image ) );
-
         //imwrite("/home/Documents/image_with_pose.jpg", cv_ptr->image);
         cout<<"Image saved at "<<current_time_stamp<<endl;
-
-        saveCurrentPose(current_time_stamp);
-
-        // restore the flag as false since the pose for VLP in the buffer is used
-        // make it true for the testing purpose
-        pose_is_updated = true;
-    }else{
-        cout<<"Image was not saved, becasue pose was not updated. Try again."<<endl;
     }
+    catch (cv_bridge::Exception& e){
+        ROS_ERROR("cv_bridge exception: %s", e.what());
+        return;
+    }
+
+    saveCurrentPose(current_time_stamp);
+
+    // restore the flag as false since the pose for VLP in the buffer is used
+    // make it true for the testing purpose
+    // pose_is_updated = true;
+
+    // }else{
+    //     cout<<"Image was not saved, becasue pose was not updated. Try again."<<endl;
+    // }
 }
 
 // save the rotation from odom and position from ekf
@@ -92,24 +94,48 @@ void saveCurrentPose(std::string& current_time_stamp){
         latestPoseFromOdom.transform.rotation.w
     );
 	tf::Matrix3x3 m(q);
+    double roll, pitch, yaw;
+    m.getRPY(roll, pitch, yaw);
+    double theta;
+    
+    // pose2d.theta = -1*(yaw * 180/PI + 180);
+    theta = -1*(yaw * 180/PI + 180);
 	
 	// initialize the pose matrix 
 	cv::Mat pose_matrix = cv::Mat::zeros(3, 4, CV_64F);
 	
-	pose_matrix.at<double>(1, 1) = m.getRow(1).getX();
-	pose_matrix.at<double>(1, 2) = m.getRow(1).getY();
-	pose_matrix.at<double>(1, 3) = m.getRow(1).getZ();
-	pose_matrix.at<double>(1, 4) = latestPoseFromEKF.transform.translation.x;
+
+    // this getrow should index with 0, the at double starts at 0 also? Referring to the opencv cheatsheet, turns out cv::mat here are also wrong access, they should start as 0
+	// pose_matrix.at<double>(1, 1) = m.getRow(1).getX();
+	// pose_matrix.at<double>(1, 2) = m.getRow(1).getY();
+	// pose_matrix.at<double>(1, 3) = m.getRow(1).getZ();
+	// pose_matrix.at<double>(1, 4) = latestPoseFromEKF.transform.translation.x;
 	
-	pose_matrix.at<double>(2, 1) = m.getRow(2).getX();
-	pose_matrix.at<double>(2, 2) = m.getRow(2).getY();
-	pose_matrix.at<double>(2, 3) = m.getRow(2).getZ();
-	pose_matrix.at<double>(2, 4) = latestPoseFromEKF.transform.translation.y;
+	// pose_matrix.at<double>(2, 1) = m.getRow(2).getX();
+	// pose_matrix.at<double>(2, 2) = m.getRow(2).getY();
+	// pose_matrix.at<double>(2, 3) = m.getRow(2).getZ();
+	// pose_matrix.at<double>(2, 4) = latestPoseFromEKF.transform.translation.y;
 	
-	pose_matrix.at<double>(3, 1) = m.getRow(3).getX();
-	pose_matrix.at<double>(3, 2) = m.getRow(3).getY();
-	pose_matrix.at<double>(3, 3) = m.getRow(3).getZ();
-	pose_matrix.at<double>(3, 4) = FIXED_Z_VALUE;
+	// pose_matrix.at<double>(3, 1) = m.getRow(3).getX();
+	// pose_matrix.at<double>(3, 2) = m.getRow(3).getY();
+	// pose_matrix.at<double>(3, 3) = m.getRow(3).getZ();
+	// pose_matrix.at<double>(3, 4) = FIXED_Z_VALUE;
+    pose_matrix.at<double>(0, 0) = m.getRow(0).getX();
+	pose_matrix.at<double>(0, 1) = m.getRow(0).getY();
+	pose_matrix.at<double>(0, 2) = m.getRow(0).getZ();
+	pose_matrix.at<double>(0, 3) = latestPoseFromEKF.transform.translation.x;
+    
+    pose_matrix.at<double>(1, 0) = m.getRow(1).getX();
+	pose_matrix.at<double>(1, 1) = m.getRow(1).getY();
+	pose_matrix.at<double>(1, 2) = m.getRow(1).getZ();
+	pose_matrix.at<double>(1, 3) = latestPoseFromEKF.transform.translation.y;
+	
+	pose_matrix.at<double>(2, 0) = m.getRow(2).getX();
+	pose_matrix.at<double>(2, 1) = m.getRow(2).getY();
+	pose_matrix.at<double>(2, 2) = m.getRow(2).getZ();
+	pose_matrix.at<double>(2, 3) = FIXED_Z_VALUE;
+	
+
 	
 	// saving quat from odom
     ofstream quat_odom_file(std::string(SAVE_PATH) + std::string("quat_from_odom_") + current_time_stamp + std::string(".txt"), ios::out | ios::binary);
@@ -127,9 +153,14 @@ void saveCurrentPose(std::string& current_time_stamp){
 		}
 		pose_file << "\n";
 	}
+    pose_file << std::to_string(theta);    
 
     quat_odom_file.close();
 	pose_file.close();
+
+    std::cout<<"translation.x: "<<latestPoseFromEKF.transform.translation.x<<std::endl;
+    std::cout<<"translation.y: "<<latestPoseFromEKF.transform.translation.y<<std::endl;
+    std::cout<<"theta: "<<theta<<std::endl;
 }
 
 int main(int argc, char** argv)
@@ -176,11 +207,12 @@ int main(int argc, char** argv)
             // lookupTransform (const std::string &target_frame, const std::string &source_frame, const ros::Time &time, const ros::Duration timeout=ros::Duration(0.0)) const
             latestPoseFromOdom = tfBuffer.lookupTransform("odom", "base_footprint", ros::Time(0));
             cout<<"Pose from Odom listener passed."<<endl;
-			latestPoseFromEKF = tfBuffer.lookupTransform("map", "odom", ros::Time(0));
+            // base_link needs to be source frame, to tell base link postion regarding map
+			latestPoseFromEKF = tfBuffer.lookupTransform("map", "base_link", ros::Time(0));
             cout<<"Pose from EKF listener passed."<<endl;
 
-            // hardcoded the pose_is_updated as true for now
-            cout<<"Pose updated: "<<pose_is_updated<<endl;
+            // // hardcoded the pose_is_updated as true for now
+            // cout<<"Pose updated: "<<pose_is_updated<<endl;
         }
         catch (tf2::TransformException &ex) {
             ROS_WARN("%s", ex.what());

@@ -29,13 +29,18 @@
 using namespace cv;
 using namespace std;
 
-
+geometry_msgs::Pose pose_odom;
 geometry_msgs::Pose2D pose2d;
 
 image_transport::Publisher pub;
 ros::Publisher info_pub;
 
 void odometryCallback_(const nav_msgs::Odometry::ConstPtr msg) {
+
+    pose_odom.orientation.x = msg->pose.pose.orientation.x;
+    pose_odom.orientation.y = msg->pose.pose.orientation.y;
+    pose_odom.orientation.z = msg->pose.pose.orientation.z;
+    pose_odom.orientation.w = msg->pose.pose.orientation.w;
     
     pose2d.x = msg->pose.pose.position.x;
     pose2d.y = msg->pose.pose.position.y;
@@ -50,6 +55,16 @@ void odometryCallback_(const nav_msgs::Odometry::ConstPtr msg) {
     m.getRPY(roll, pitch, yaw);
     
     pose2d.theta = -1*(yaw * 180/PI + 180);
+
+    cout<<"PoseReceivedFromOdom:"<<endl;    
+    cout<<"Pose Orietattion.x: "<<pose_odom.orientation.x<<endl;
+    cout<<"Pose Orietattion.y: "<<pose_odom.orientation.y<<endl;
+    cout<<"Pose Orietattion.z: "<<pose_odom.orientation.z<<endl;
+    cout<<"Pose Orietattion.w: "<<pose_odom.orientation.w<<endl;  
+    cout<<"*******************************************"<<endl;
+    cout<<"odom theta at this frame is: "<<pose2d.theta<<endl;
+    cout<<"roll at this frame is: "<<roll<<endl;
+    cout<<"pitch at this frame is: "<<pitch<<endl;
 }
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)

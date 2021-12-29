@@ -4,15 +4,19 @@
 #include "yaml-cpp/yaml.h"
 #include <string>
 #include "geometry_msgs/PoseWithCovarianceStamped.h"
+#include "geometry_msgs/Pose2D.h"
 #include <typeinfo>
 #include <nav_msgs/Odometry.h>
+#include <tf/tf.h>
 
 
 using namespace std;
 
 #define USE_ODOMETERY_FILETERD 0
+#define PI 3.14159265
 
 geometry_msgs::Pose pose_odom;
+geometry_msgs::Pose2D pose2d;
 
 ros::Publisher pub;
 
@@ -42,7 +46,6 @@ void odometryCallback_(const nav_msgs::Odometry::ConstPtr msg) {
     // double roll, pitch, yaw;
     // m.getRPY(roll, pitch, yaw);
     
-    // pose2d.theta = -1*(yaw * 180/PI + 180);
 }
 
 void lightCallback(const liphy_vlp::liphylight msg)
@@ -102,7 +105,7 @@ void lightCallback(const liphy_vlp::liphylight msg)
     cout << "Light_x: " << msg.light_x << endl;
     cout << "Light_y: " << msg.light_y << endl;
     cout << "Light_z: " << msg.light_z << endl;
-    cout << "Theta: " << msg.theta << endl;
+    cout << "Light Theta: " << msg.theta << endl;
 
 }
 
