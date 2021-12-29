@@ -36,8 +36,13 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <std_msgs/Bool.h>
 
-// for rosbag
+// for rosbag and data saving
 #include <rosbag/bag.h>
+#include <sys/types.h>
+#include <sys/stat.h> // https://www.gnu.org/software/libc/manual/html_node/Permission-Bits.html
+#include <errno.h>
+#include <string.h>
+#include <boost/filesystem.hpp>
 
 // from robot spinning
 #include <cmath>
@@ -47,10 +52,13 @@
 #include <cv_bridge/cv_bridge.h>
 #include <robot_spinning_cap_data/robot_spinning_cap_data.h>
 
-#define FIXED_Z_VALUE 0.4
+#define TURTLE_Z_VALUE 0.435 // measured turtlebot3 web camera centroid height 
+#define TROLLEY_HEIGHT 0.77
+#define MV_CAM_HEIGHT 0.165
+#define LIGHT_HEIGHT 2.7
 #define VERSION "2.1"
 
-#define SAVE_PATH "/home/liphy/catkin_ws/src/robot_spinning_cap_data/cap_data/"
+#define SAVE_PATH "/home/liphy/catkin_ws/src/robot_spinning_cap_data/cap_data"
 
 using namespace cv;
 
@@ -114,7 +122,41 @@ namespace robot_spinning
         snap_cnt = 0;
 
         // to make rosbag contiuously saving
-        pose_bag.open(std::string(SAVE_PATH) + "pose_" + std::to_string(ros::Time::now().toSec()) + ".bag", rosbag::bagmode::Write);
+        init_time_path = std::string(SAVE_PATH) + "/" + std::to_string(int(ros::Time::now().toSec()));
+
+        // do the os.mkdir as in python fashion
+        // struct stat info;
+        // if (stat(init_time_path, &info) != 0)
+        //     printf( "cannot access %s\n", init_time_path );
+        // else if (info.st_mode & S_IFDIR)
+        //     printf("the data path already exists, do nothing")
+        // else
+        // mkdir(init_time_path);
+        // printf("make dir new init time path done");
+
+        // only works for cpp17
+        // try{
+        //     if(fs::create_directory(init_time_path))
+        //         std::cout << "create the init time path done\n";
+        //     else
+        //         std::cerr << "failed to create the dir\n";
+        // } catch (const std::exception& e){
+        //     std::cerr << e.what << "\n";
+        // }
+
+        // if (mkdir(init_time_path, S_IRWXU | S_IRWXG | S_IRWXO) == -1) { // if mkdir fails
+        //     printf("Error: %s\n", strerror(errno));
+        // }
+
+        boost::filesystem::path dir(init_time_path + "/color");
+        // if (boost::filesystem::create_directory(dir)){
+        //     std::cerr << "Directory Created" << init_time_path << std::endl;
+        // }
+        if (boost::filesystem::create_directories(dir)){ // create_dirs goes to those path even not exist
+            std::cerr << "Directory Created" << init_time_path << std::endl;
+        }
+
+        pose_bag.open(init_time_path + "/pose.bag", rosbag::bagmode::Write);
     }
 
     void SpinApp::spin()
@@ -146,7 +188,7 @@ namespace robot_spinning
                     if (translation_done) // second spin is also done
                     {
                         ROS_INFO("DEBUG: ##################### second spin done...");
-                        // pose_bag.close();
+                        pose_bag.close();
                         ros::shutdown();
                         ROS_INFO("SHUTDOWN AND QUIT rscd node...");
                     }
@@ -321,12 +363,12 @@ namespace robot_spinning
             
             std::string current_time_stamp = std::to_string((int)(ros::Time::now().toSec()));
 
-            ROS_ASSERT( cv::imwrite( std::string(SAVE_PATH) + std::string( "image_" ) + current_time_stamp + std::string( ".png" ), cv_ptr->image ) );
+            ROS_ASSERT( cv::imwrite(init_time_path + "/color/" + current_time_stamp + std::string( ".jpg" ), cv_ptr->image ));
 
             //imwrite("/home/Documents/image_with_pose.jpg", cv_ptr->image);
             std::cout<<"Image saved at "<<current_time_stamp<<std::endl;
 
-            SpinApp::saveCurrentPose(current_time_stamp);
+            SpinApp::saveCurrentPose();
             store_image = false; // in the callback, everytime the data cap, reset store flag
             ROS_INFO("DEBUG: Image cb received and data saved++++++++");
         }
@@ -391,7 +433,7 @@ namespace robot_spinning
     }
 
     // save the rotation from odom and position from ekf
-    void SpinApp::saveCurrentPose(std::string& current_time_stamp){
+    void SpinApp::saveCurrentPose(){
         ROS_INFO("Overall saving pose");
         
         // saving the rotation matrix in the transform matrix
@@ -407,7 +449,7 @@ namespace robot_spinning
         msg_quat = tf2::toMsg(q);
         tf2::Vector3 translation(latestPoseFromEKF.transform.translation.x,
                             latestPoseFromEKF.transform.translation.y,
-                            FIXED_Z_VALUE);
+                            TURTLE_Z_VALUE);
         tf2::Transform transform(rotate, translation);
         geometry_msgs::TransformStamped msg_transform;
         msg_transform.transform = tf2::toMsg(transform);

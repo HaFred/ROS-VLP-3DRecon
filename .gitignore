@@ -1,4 +1,7 @@
-*.txt
+# data
+
 *.png
+*.jpg
 *.bag
+*.txt
 *.csv

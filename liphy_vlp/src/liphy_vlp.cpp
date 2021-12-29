@@ -54,7 +54,11 @@ void odometryCallback_(const nav_msgs::Odometry::ConstPtr msg) {
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
-    float light_diameter = 17.38f;
+    // no need to scale the dia, dia is used to calculate the x, y in lightFlyManager
+    // float light_diameter = LIGHT_DIAMETER / (LIGHT_HEIGHT - TROLLEY_HEIGHT - MV_CAM_HEIGHT) * (LIGHT_HEIGHT - MV_CAM_HEIGHT);
+
+    float light_diameter = LIGHT_DIAMETER;
+
     bool sameKeypoint = false;
 
     //std::cout<<"Image callback received"<<std::endl;

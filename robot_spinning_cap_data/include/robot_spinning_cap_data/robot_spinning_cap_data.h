@@ -123,7 +123,9 @@ namespace robot_spinning
             // 2nd rotate
             ros::Subscriber sub_speed_ctrller;
 
+            // rosbag related
             rosbag::Bag pose_bag;
+            std::string init_time_path;
 
             // std::vector<cv::Mat> images_;
 
@@ -170,7 +172,7 @@ namespace robot_spinning
             void secondRotateCb(const std_msgs::BoolConstPtr& msg);
 
             // migrated from imageCallback for robot_spinning_cap_data node
-            void saveCurrentPose(std::string& current_time_stamp);
+            void saveCurrentPose();
             void imageCb(const sensor_msgs::ImageConstPtr& msg);
     };
 } // namespace robot_spinning
