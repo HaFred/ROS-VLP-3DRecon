@@ -19,6 +19,7 @@ from std_msgs.msg import Bool
 from tf.transformations import euler_from_quaternion
 from geometry_msgs.msg import Point, Twist
 from math import sqrt
+# import argparser
 
 x = 0.0
 y = 0.0 
@@ -80,7 +81,7 @@ def main():
 
     while not rospy.is_shutdown():
 
-        assigned_dist = 0.4  # there is odom dist shift, 1m here is around 1.5 in reality. todo consider replacing the dist msg from odom into tf
+        assigned_dist = 0.5  # there is odom dist shift, 1m here is around 1.5 in reality. todo consider replacing the dist msg from odom into tf
 
         rospy.loginfo("\n************")
         rospy.loginfo("delta is : %f" % delta)
@@ -97,7 +98,7 @@ def main():
                 flag_2nd_rotate.data = False
             rospy.loginfo("%f" % curr_translation)            
         else:
-            rospy.loginfo("ready for 2nd rotataion")
+            rospy.loginfo("ready for or doing 2nd rotataion")
             speed.linear.x = 0.0
             speed.angular.z = 0.0
             flag_2nd_rotate.data = True

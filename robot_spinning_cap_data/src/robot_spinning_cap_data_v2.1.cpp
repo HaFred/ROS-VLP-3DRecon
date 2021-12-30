@@ -181,7 +181,7 @@ namespace robot_spinning
                     last_angle=0.0;
                     is_active = false;
                     first_spin_done = true;
-                    log("Finished Semicircle Data Cap");
+                    log("Finished semicircle data cap");
 
                     // log("Finished Semicircle Data Cap"); 
                     // ROS_INFO("translation_done: %s", translation_done ? "true":"false"); 
@@ -193,6 +193,10 @@ namespace robot_spinning
                         pose_bag.close();
                         ros::shutdown();
                         ROS_INFO("SHUTDOWN AND QUIT rscd node...");
+                    }
+                    else
+                    {
+                        log("Start the translation");
                     }
                 }
                 else
@@ -327,7 +331,7 @@ namespace robot_spinning
         ang_vel_cur = msg->twist.twist.angular.z;
     }
 
-    // here if you look at the src of ima.eTransport::Sub, usb_cam, you will find that they directly utilize: it.advertiseCamera("image_raw", 1); rather than using nh.advertise(). With the publish(const sensor_msgs::ImageConstPtr& image, ...) of it.advertiseCamera, the cb of any subs (imageCb) here can take in ImageConstPtr& image type param without requiring like nh.advertise<> setting up the msg datatype
+    // here if you look at the src of imageTransport::Sub, usb_cam, you will find that they directly utilize: it.advertiseCamera("image_raw", 1); rather than using nh.advertise(). With the publish(const sensor_msgs::ImageConstPtr& image, ...) of it.advertiseCamera, the cb of any subs (imageCb) here can take in ImageConstPtr& image type param without requiring like nh.advertise<> setting up the msg datatype
     void SpinApp::imageCb(const sensor_msgs::ImageConstPtr& msg) // these msg are setup to receive msg from the topic which is encoded by the publisher 
     {
         // ROS_INFO("DEBUG: camera image cb is activated ********");
@@ -363,14 +367,17 @@ namespace robot_spinning
                     return;
             }
             
-            std::string current_time_stamp = std::to_string((int)(ros::Time::now().toSec()));
+            ros::Time current_time;
+            current_time = ros::Time::now();
 
-            ROS_ASSERT( cv::imwrite(init_time_path + "/color/" + current_time_stamp + std::string( ".jpg" ), cv_ptr->image ));
+            std::string current_time_int_stamp = std::to_string((int)(current_time.toSec()));
+
+            ROS_ASSERT( cv::imwrite(init_time_path + "/color/" + current_time_int_stamp + std::string( ".jpg" ), cv_ptr->image ));
 
             //imwrite("/home/Documents/image_with_pose.jpg", cv_ptr->image);
-            std::cout<<"Image saved at "<<current_time_stamp<<std::endl;
+            std::cout<<"Image saved at "<<current_time_int_stamp<<std::endl;
 
-            SpinApp::saveCurrentPose();
+            SpinApp::saveCurrentPose(current_time);
             store_image = false; // in the callback, everytime the data cap, reset store flag
             ROS_INFO("DEBUG: Image cb received and data saved++++++++");
         }
@@ -435,7 +442,7 @@ namespace robot_spinning
     }
 
     // save the rotation from odom and position from ekf
-    void SpinApp::saveCurrentPose(){
+    void SpinApp::saveCurrentPose(ros::Time& current_time){
         ROS_INFO("Overall saving pose");
         
         // saving the rotation matrix in the transform matrix
@@ -460,13 +467,13 @@ namespace robot_spinning
                             latestPoseFromEKF.transform.translation.y,
                             TURTLE_Z_VALUE);
         tf2::Transform transform(rotate, translation);
-        
+
         geometry_msgs::TransformStamped msg_transform;
         msg_transform.transform = tf2::toMsg(transform);
 
-        pose_bag.write("bag_pose2d", ros::Time::now(), msg_pose2d);
-        pose_bag.write("bag_quat", ros::Time::now(), msg_quat);
-        pose_bag.write("bag_rotmat", ros::Time::now(), msg_transform);
+        pose_bag.write("bag_pose2d", current_time, msg_pose2d);
+        pose_bag.write("bag_quat", current_time, msg_quat);
+        pose_bag.write("bag_rotmat", current_time, msg_transform);
     }
 
     //*************
@@ -503,7 +510,7 @@ namespace robot_spinning
         try{
             latestPoseFromOdom = spin.tfBuffer.lookupTransform("odom", "base_footprint", ros::Time(0));
             std::cout<<"Pose from Odom listener passed."<<std::endl;
-            latestPoseFromEKF = spin.tfBuffer.lookupTransform("map", "odom", ros::Time(0));
+            latestPoseFromEKF = spin.tfBuffer.lookupTransform("map", "base_link", ros::Time(0));
             std::cout<<"Pose from EKF listener passed."<<std::endl;
             spin.log("Robot rotating for data capturing starting...");
             spin.spin();

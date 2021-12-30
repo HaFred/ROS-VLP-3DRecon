@@ -172,7 +172,7 @@ namespace robot_spinning
             void secondRotateCb(const std_msgs::BoolConstPtr& msg);
 
             // migrated from imageCallback for robot_spinning_cap_data node
-            void saveCurrentPose();
+            void saveCurrentPose(ros::Time& current_time);
             void imageCb(const sensor_msgs::ImageConstPtr& msg);
     };
 } // namespace robot_spinning
