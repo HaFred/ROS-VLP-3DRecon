@@ -63,6 +63,8 @@ void odometryCallback_(const nav_msgs::Odometry::ConstPtr msg) {
     cout<<"Pose Orietattion.w: "<<pose_odom.orientation.w<<endl;  
     cout<<"*******************************************"<<endl;
     cout<<"odom theta at this frame is: "<<pose2d.theta<<endl;
+    cout<<"pose2d x at this frame is: "<<pose2d.x<<endl;
+    cout<<"pose2d y at this frame is: "<<pose2d.y<<endl;
     cout<<"roll at this frame is: "<<roll<<endl;
     cout<<"pitch at this frame is: "<<pitch<<endl;
 }
@@ -190,8 +192,7 @@ int main(int argc, char** argv)
     pub = it.advertise("liphy_vlp/processed_image", 1);
 
     info_pub = nh.advertise<liphy_vlp::liphylight>("liphy_vlp_info", 1);
-
-    
+    std::cout<<"Liphly vlp node, publish liphy_vlp_info topic"<<std::endl;    
 
     #if (USE_ODOMETERY_FILETERD)
         ros::Subscriber sub_odom_filtered_ = nh.subscribe("odometry/filtered", 1, odometryCallback_);

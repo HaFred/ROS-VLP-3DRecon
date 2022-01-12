@@ -2,8 +2,7 @@
  * @file 
  *
  * @brief 2.1 tries to embed the fin signal and publish to robot_trans node. Meanwhile the srv not stopped, still listening for the trans_fin singal from robot_trans node.
- *        2. For the data cap, no longer using ofstream, instead we try rosbag (done at v2.1).
- *        3. Replace all the tf with tf2
+ *          The robot spins at postion A, then translate to postion B and spin again. Take data during the spin.
  * 
  * @date Dec 20, 2021
  *
@@ -172,13 +171,13 @@ namespace robot_spinning
             {
                // robot spinning
                 ROS_INFO_STREAM_THROTTLE(1.0, "Degrees to go: " << radians_to_degrees(std::abs(given_target_angle - curr_angle))); // throttle for this output
+
                 if ((given_target_angle - curr_angle) <= 0.0174) // check if ultimate target angle is reached (<1 degree) & finished, then cap images and do the snitching. But here for 3d_recon we just give the en signal for the last frame cap
                 {
                     snap();
                     // halt the robot for spinning 180 degree
                     pub_cmd_vel.publish(zero_cmd_vel);
-                    curr_angle=0.0;
-                    last_angle=0.0;
+
                     is_active = false;
                     first_spin_done = true;
                     log("Finished semicircle data cap");
@@ -189,19 +188,25 @@ namespace robot_spinning
 
                     if (translation_done) // second spin is also done
                     {
+                        // sleep for .5 sec to enactivate the last snap
+                        ros::Duration(0.5).sleep();
                         ROS_INFO("DEBUG: ##################### second spin done...");
                         pose_bag.close();
-                        ros::shutdown();
                         ROS_INFO("SHUTDOWN AND QUIT rscd node...");
+                        ros::shutdown();
                     }
                     else
                     {
-                        log("Start the translation");
+                        ROS_INFO("DEBUG: ##################### Start the translation");
                     }
                 }
                 else
                 {   // not finished yet
-                    pub_to_rbt_trans.publish(trans_not_yet_enabled_sign);
+                    if (!translation_done)
+                    {
+                        pub_to_rbt_trans.publish(trans_not_yet_enabled_sign);
+                        msg_translate = trans_not_yet_enabled_sign;
+                    }
                     if (hasReachedAngle())
                     {
                         pub_cmd_vel.publish(zero_cmd_vel); // stop before taking a snapshot when angle reached 
@@ -237,6 +242,12 @@ namespace robot_spinning
                 if(translation_done){
                     ROS_INFO("DEBUG: ##################### translation done...");
                     is_active = true;
+                    // reset
+                    curr_angle=0.0;
+                    last_angle=0.0;
+
+                    // now the translation is at position B, thus msg_translate turns into 1
+                    msg_translate = trans_enable_sign;
                 }
             }
 
@@ -244,6 +255,7 @@ namespace robot_spinning
                 // publish a topic to robot_trans node
                 pub_to_rbt_trans.publish(trans_enable_sign);
             }
+
             // if not active, still needs to activate the callback to make the process flowing by single-threaded spin
             ros::spinOnce();
             loop_rate.sleep(); // works with rate(10)
@@ -292,7 +304,9 @@ namespace robot_spinning
         if (msg->data)
         {
             // ROS_INFO("DEBUG: second rotate activated");
-            cmd_vel.angular.z = -request_rot_vel;
+
+            // keep it as inverse clockwise comparing to 1st rotate, coz it helps determine/validate msg_translate
+            cmd_vel.angular.z = - request_rot_vel;
             translation_done = true;
         }
         else
@@ -337,6 +351,17 @@ namespace robot_spinning
         // ROS_INFO("DEBUG: camera image cb is activated ********");
         if (store_image)
         {
+            // **** First Convert the Sensor Msg Image to OpenCV format
+
+            cv_bridge::CvImagePtr cv_ptr;
+            try{
+                cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+            }
+            catch (cv_bridge::Exception& e){
+                ROS_ERROR("cv_bridge exception: %s", e.what());
+                return;
+            }
+
             /* note that lookupTransform here must be updated (accessed) before every snap. Otherwise, the pose saved won't be updated (in dec20 1st commit, I put it in main() and cannot be accessed with the ok() in spin())...
 
             Previously we make robot spin and data cap as separated node, robot_spinning & image_with_pose, that's why back then the poses are updated. Now we combine these two nodes into one, if we do not go through lookupTransform() every time, the dated-pose issue occurs.
@@ -345,9 +370,9 @@ namespace robot_spinning
             try{
                 // lookupTransform (const std::string &target_frame, const std::string &source_frame, const ros::Time &time, const ros::Duration timeout=ros::Duration(0.0)) const
                 latestPoseFromOdom = tfBuffer.lookupTransform("odom", "base_footprint", ros::Time(0));
-                std::cout<<"Pose from Odom listener passed."<<std::endl;
+                // std::cout<<"Pose from Odom listener passed."<<std::endl;
                 latestPoseFromEKF = tfBuffer.lookupTransform("map", "base_link", ros::Time(0));
-                std::cout<<"Pose from EKF listener passed."<<std::endl;
+                // std::cout<<"Pose from EKF listener passed."<<std::endl;
             }
             catch (tf2::TransformException &ex) {
                 ROS_WARN("%s", ex.what());
@@ -356,17 +381,6 @@ namespace robot_spinning
                 // continue; // coz no while here
             }
 
-            // **** First Convert the Sensor Msg Image to OpenCV format
-
-            cv_bridge::CvImagePtr cv_ptr;
-            try{
-                    cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-            }
-            catch (cv_bridge::Exception& e){
-                    ROS_ERROR("cv_bridge exception: %s", e.what());
-                    return;
-            }
-            
             ros::Time current_time;
             current_time = ros::Time::now();
 
@@ -380,6 +394,7 @@ namespace robot_spinning
             SpinApp::saveCurrentPose(current_time);
             store_image = false; // in the callback, everytime the data cap, reset store flag
             ROS_INFO("DEBUG: Image cb received and data saved++++++++");
+            
         }
         else
         {
@@ -443,7 +458,7 @@ namespace robot_spinning
 
     // save the rotation from odom and position from ekf
     void SpinApp::saveCurrentPose(ros::Time& current_time){
-        ROS_INFO("Overall saving pose");
+        // ROS_INFO("Overall saving pose");
         
         // saving the rotation matrix in the transform matrix
         tf2::Quaternion q(
@@ -474,6 +489,11 @@ namespace robot_spinning
         pose_bag.write("bag_pose2d", current_time, msg_pose2d);
         pose_bag.write("bag_quat", current_time, msg_quat);
         pose_bag.write("bag_rotmat", current_time, msg_transform);
+        pose_bag.write("bag_tran_bool", current_time, msg_translate);
+
+        std::cout<<"saving pose2d x at this frame as: "<<msg_pose2d.x<<std::endl;
+        std::cout<<"saving pose2d y at this frame as: "<<msg_pose2d.y<<std::endl;
+        std::cout<<"saving theta at this frame as: "<<msg_pose2d.theta<<std::endl;
     }
 
     //*************
@@ -503,21 +523,21 @@ namespace robot_spinning
     /***************************** 
      global var for tfbuffer lookupTransform
     **/
-    while (ros::ok()){
-        // tf listener, for src/target frame, refer to iwp_3.4
-        // try-catch clause is for lookupTransform to continue, because it cannot be put inside the cb fn (refer to my ros answers upvote). Making it class member var and put outside, it works
-        
+    while (ros::ok()){       
         try{
+            // these lookupTransform here is for the init frame captured before spinning
             latestPoseFromOdom = spin.tfBuffer.lookupTransform("odom", "base_footprint", ros::Time(0));
             std::cout<<"Pose from Odom listener passed."<<std::endl;
             latestPoseFromEKF = spin.tfBuffer.lookupTransform("map", "base_link", ros::Time(0));
             std::cout<<"Pose from EKF listener passed."<<std::endl;
             spin.log("Robot rotating for data capturing starting...");
+            spin.log("Spinnning function activated");
             spin.spin();
             spin.log("Rotating spin done");
         }
         catch (tf2::TransformException &ex) {
             ROS_WARN("%s", ex.what());
+            spin.log("The slovlp is not activated yet, the very first few frames pose coming from slovlp is not correct, plz restart the program...");
             ros::Duration(1.0).sleep();
             continue; // doing the rest other than exception, if no while just comment
         }

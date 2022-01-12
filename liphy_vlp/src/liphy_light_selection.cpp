@@ -116,6 +116,7 @@ int main(int argc, char** argv)
     ros::NodeHandle nh;
     pub = nh.advertise<geometry_msgs::PoseWithCovarianceStamped>("slovlp_ekf_info", 1);
     ros::Subscriber lls_subscriber = nh.subscribe("liphy_vlp_info", 1, lightCallback);
+    std::cout<<"Liphly light selection node, suscribe to liphy_vlp_info topic"<<std::endl;
 
     #if (USE_ODOMETERY_FILETERD)
         ros::Subscriber sub_odom_filtered_ = nh.subscribe("odometry/filtered", 1, odometryCallback_);

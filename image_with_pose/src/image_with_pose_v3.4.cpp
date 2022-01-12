@@ -106,34 +106,20 @@ void saveCurrentPose(std::string& current_time_stamp){
 	
 
     // this getrow should index with 0, the at double starts at 0 also? Referring to the opencv cheatsheet, turns out cv::mat here are also wrong access, they should start as 0
-	// pose_matrix.at<double>(1, 1) = m.getRow(1).getX();
-	// pose_matrix.at<double>(1, 2) = m.getRow(1).getY();
-	// pose_matrix.at<double>(1, 3) = m.getRow(1).getZ();
-	// pose_matrix.at<double>(1, 4) = latestPoseFromEKF.transform.translation.x;
-	
-	// pose_matrix.at<double>(2, 1) = m.getRow(2).getX();
-	// pose_matrix.at<double>(2, 2) = m.getRow(2).getY();
-	// pose_matrix.at<double>(2, 3) = m.getRow(2).getZ();
-	// pose_matrix.at<double>(2, 4) = latestPoseFromEKF.transform.translation.y;
-	
-	// pose_matrix.at<double>(3, 1) = m.getRow(3).getX();
-	// pose_matrix.at<double>(3, 2) = m.getRow(3).getY();
-	// pose_matrix.at<double>(3, 3) = m.getRow(3).getZ();
-	// pose_matrix.at<double>(3, 4) = FIXED_Z_VALUE;
-    pose_matrix.at<double>(0, 0) = m.getRow(0).getX();
-	pose_matrix.at<double>(0, 1) = m.getRow(0).getY();
-	pose_matrix.at<double>(0, 2) = m.getRow(0).getZ();
-	pose_matrix.at<double>(0, 3) = latestPoseFromEKF.transform.translation.x;
+    pose_matrix.at<double>(1, 1) = m.getRow(0).getX();
+	pose_matrix.at<double>(1, 2) = m.getRow(0).getY();
+	pose_matrix.at<double>(1, 3) = m.getRow(0).getZ();
+	pose_matrix.at<double>(1, 4) = latestPoseFromEKF.transform.translation.x;
     
-    pose_matrix.at<double>(1, 0) = m.getRow(1).getX();
-	pose_matrix.at<double>(1, 1) = m.getRow(1).getY();
-	pose_matrix.at<double>(1, 2) = m.getRow(1).getZ();
-	pose_matrix.at<double>(1, 3) = latestPoseFromEKF.transform.translation.y;
+    pose_matrix.at<double>(2, 1) = m.getRow(1).getX();
+	pose_matrix.at<double>(2, 2) = m.getRow(1).getY();
+	pose_matrix.at<double>(2, 3) = m.getRow(1).getZ();
+	pose_matrix.at<double>(2, 4) = latestPoseFromEKF.transform.translation.y;
 	
-	pose_matrix.at<double>(2, 0) = m.getRow(2).getX();
-	pose_matrix.at<double>(2, 1) = m.getRow(2).getY();
-	pose_matrix.at<double>(2, 2) = m.getRow(2).getZ();
-	pose_matrix.at<double>(2, 3) = FIXED_Z_VALUE;
+	pose_matrix.at<double>(3, 1) = m.getRow(2).getX();
+	pose_matrix.at<double>(3, 2) = m.getRow(2).getY();
+	pose_matrix.at<double>(3, 3) = m.getRow(2).getZ();
+	pose_matrix.at<double>(3, 4) = FIXED_Z_VALUE;
 	
 
 	

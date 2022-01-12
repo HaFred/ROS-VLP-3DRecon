@@ -36,7 +36,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: LaserScan
+    SyncSource: Image
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -454,4 +454,4 @@ Window Geometry:
     collapsed: true
   Width: 1389
   X: 298
-  Y: 114
+  Y: 84

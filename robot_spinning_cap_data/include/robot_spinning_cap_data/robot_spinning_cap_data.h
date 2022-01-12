@@ -87,13 +87,13 @@ namespace robot_spinning
             void log(std::string msg);
             tf2_ros::Buffer tfBuffer;
 
-
         private:
             ros::NodeHandle nh;
             ros::NodeHandle priv_nh;
             std::map<std::string, std::string> params;
 
             geometry_msgs::Twist cmd_vel, zero_cmd_vel;
+            std_msgs::Bool msg_translate;
             std_msgs::Bool trans_enable_sign, trans_not_yet_enabled_sign;
 
             uint snap_cnt;
