@@ -87,7 +87,7 @@ namespace robot_spinning
 
         // once include header and class, do not put the declaration and definition together as in iwp_v2... It may cause the sub not working
         // before rect, it's usb_cam/image_raw
-        sub_camera = it.subscribe("usb_cam/image_rect_color", 1, &SpinApp::imageCb, this);
+        sub_camera = it.subscribe("usb_cam/image_raw", 1, &SpinApp::imageCb, this);
         // sub_camera = it.subscribe("usb_cam/image_raw", 1, &SpinApp::imageCb, this);  
         // the size of the publisher queue is set to 1
         
@@ -115,7 +115,7 @@ namespace robot_spinning
         is_active = false;
         first_spin_done = false;
         translation_done = false;
-        store_image = true;
+        store_image = true;  // data cap at the very beginning
         ang_vel_cur = 0.0;
         given_target_angle = 0.0;
         curr_angle = 0.0;
@@ -188,8 +188,8 @@ namespace robot_spinning
 
                     if (translation_done) // second spin is also done
                     {
-                        // sleep for .5 sec to enactivate the last snap
-                        ros::Duration(0.5).sleep();
+                        // sleep for 2 sec to enactivate the last snap taken account by the cb ros::spin
+                        ros::Duration(2).sleep();
                         ROS_INFO("DEBUG: ##################### second spin done...");
                         pose_bag.close();
                         ROS_INFO("SHUTDOWN AND QUIT rscd node...");
@@ -205,6 +205,7 @@ namespace robot_spinning
                     if (!translation_done)
                     {
                         pub_to_rbt_trans.publish(trans_not_yet_enabled_sign);
+                        // this msg is to distinguish pos B & A
                         msg_translate = trans_not_yet_enabled_sign;
                     }
                     if (hasReachedAngle())
@@ -240,13 +241,14 @@ namespace robot_spinning
             {
                 // ROS_INFO("In the spin(), but is_active false");
                 if(translation_done){
-                    ROS_INFO("DEBUG: ##################### translation done...");
+                    ROS_INFO("DEBUG: ##################### translation done, start 2nd spinning...");
+                    snap();
                     is_active = true;
                     // reset
                     curr_angle=0.0;
                     last_angle=0.0;
 
-                    // now the translation is at position B, thus msg_translate turns into 1
+                    // now the translation is at position B, thus msg_translate turns into 1, here we just assign a bool msg_type with its data==true to msg_translate. It is to distinguish pos B & A
                     msg_translate = trans_enable_sign;
                 }
             }
@@ -305,8 +307,8 @@ namespace robot_spinning
         {
             // ROS_INFO("DEBUG: second rotate activated");
 
-            // keep it as inverse clockwise comparing to 1st rotate, coz it helps determine/validate msg_translate
-            cmd_vel.angular.z = - request_rot_vel;
+            // just keep the 2nd spinning the same direction. Coz we did it for arkit data
+            cmd_vel.angular.z = request_rot_vel;
             translation_done = true;
         }
         else
@@ -392,7 +394,7 @@ namespace robot_spinning
             std::cout<<"Image saved at "<<current_time_int_stamp<<std::endl;
 
             SpinApp::saveCurrentPose(current_time);
-            store_image = false; // in the callback, everytime the data cap, reset store flag
+            store_image = false; // in the callback, everytime the data cap, reset store flag into false
             ROS_INFO("DEBUG: Image cb received and data saved++++++++");
             
         }

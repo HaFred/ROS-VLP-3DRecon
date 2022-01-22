@@ -161,7 +161,7 @@ int main(int argc, char** argv)
     tf2_ros::TransformListener tfListener(tfBuffer);
 
     image_transport::ImageTransport it(nh);
-    image_transport::Subscriber sub = it.subscribe("usb_cam/image_raw", 1, imageCallback); // the size of the publisher queue is set to 1
+    image_transport::Subscriber sub = it.subscribe("usb_cam/image_rect_color", 1, imageCallback); // the size of the publisher queue is set to 1
 
     // moving it out of nh.ok is not ok, the odom cannot be passed to lookuptransform as target_frame
     // try{
