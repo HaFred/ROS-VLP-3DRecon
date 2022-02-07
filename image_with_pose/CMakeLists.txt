@@ -46,7 +46,7 @@ link_directories(
  ${catkin_LIB_DIRS} 
 )
 
-add_executable(image_with_pose src/image_with_pose_v3.4.cpp)
+add_executable(image_with_pose src/image_with_pose_v5.cpp)
 # add_executable(${PROJECT_NAME} src/image_with_pose.cpp)
 # add_dependencies(turtlebot3_panorama ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(image_with_pose ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${Boost_LIBRARIES} ${Eigen3_LIBRARIES})

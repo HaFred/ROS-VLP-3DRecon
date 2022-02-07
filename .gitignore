@@ -8,3 +8,5 @@
 *.log
 *.yaml
 *.yml
+
+*.tar.gz

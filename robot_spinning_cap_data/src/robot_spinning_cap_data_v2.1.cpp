@@ -57,6 +57,8 @@
 #define MV_CAM_HEIGHT 0.165
 #define LIGHT_HEIGHT 2.7
 #define PI 3.14159265
+
+#define NEW_Z_CART_WITH_TURTLE 1.19
 #define VERSION "2.1"
 
 #define SAVE_PATH "/home/liphy/catkin_ws/src/robot_spinning_cap_data/cap_data"
@@ -87,7 +89,7 @@ namespace robot_spinning
 
         // once include header and class, do not put the declaration and definition together as in iwp_v2... It may cause the sub not working
         // before rect, it's usb_cam/image_raw
-        sub_camera = it.subscribe("usb_cam/image_raw", 1, &SpinApp::imageCb, this);
+        sub_camera = it.subscribe("usb_cam/image_rect_color", 1, &SpinApp::imageCb, this);
         // sub_camera = it.subscribe("usb_cam/image_raw", 1, &SpinApp::imageCb, this);  
         // the size of the publisher queue is set to 1
         
@@ -482,7 +484,7 @@ namespace robot_spinning
         msg_quat = tf2::toMsg(q);
         tf2::Vector3 translation(latestPoseFromEKF.transform.translation.x,
                             latestPoseFromEKF.transform.translation.y,
-                            TURTLE_Z_VALUE);
+                            NEW_Z_CART_WITH_TURTLE);
         tf2::Transform transform(rotate, translation);
 
         geometry_msgs::TransformStamped msg_transform;
